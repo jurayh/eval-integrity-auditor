@@ -60,6 +60,24 @@ def render_terminal(result: AuditResult) -> str:
             lines.append(f"    cost per success: ${c.cost_per_success_usd:.4f}")
         if c.avg_tool_calls_per_success is not None:
             lines.append(f"    avg tool calls per success: {c.avg_tool_calls_per_success}")
+        if c.avg_tries_per_success is not None:
+            lines.append(
+                f"    avg tries per success: {c.avg_tries_per_success} "
+                f"(max {c.max_tries} on one attempt)"
+            )
+        lines.append(
+            f"    wasted on non-passing attempts: ${c.wasted_usd:.4f} "
+            f"({c.wasted_share:.0%} of spend)"
+        )
+        lines.append(
+            f"    output tokens per attempt: p50={c.p50_tokens_out:,} "
+            f"p90={c.p90_tokens_out:,} max={c.max_tokens_out:,} ({c.max_tokens_out_task})"
+        )
+        if c.budget_per_task_usd is not None:
+            lines.append(
+                f"    within ${c.budget_per_task_usd:.2f}/task budget: "
+                f"{c.tasks_within_budget}/{c.tasks_total} tasks passed"
+            )
         lines.append("")
 
     if model.unsupported:

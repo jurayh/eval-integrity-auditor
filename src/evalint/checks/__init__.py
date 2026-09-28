@@ -1,4 +1,4 @@
-"""Rule registry. v0.1 ships deterministic, high-precision checks only.
+"""Rule registry. v0.3 ships deterministic, high-precision checks only.
 
 Sequencing rule: earn trust with deterministic evidence before adding
 probabilistic signals. Every finding carries a confidence label; a linter that
@@ -7,7 +7,7 @@ cries contamination on a clean eval is worse than no auditor.
 from __future__ import annotations
 
 from .base import Check
-from .cost import CostReportingCheck
+from .cost import CHECKS as COST_CHECKS
 from .env_leakage import EnvLeakageCheck
 from .grader import EmptyPathCheck, VerifierWritableCheck
 from .judge import CHECKS as JUDGE_CHECKS
@@ -16,7 +16,7 @@ REGISTRY: list[Check] = [
     EnvLeakageCheck(),  # ENV-001
     VerifierWritableCheck(),  # GRAD-001
     EmptyPathCheck(),  # GRAD-002
-    CostReportingCheck(),  # COST-001
+    *COST_CHECKS,  # COST-001 .. COST-004
     *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-006
 ]
 

@@ -13,7 +13,6 @@ from . import adapters  # noqa: F401  (import registers the Inspect adapter)
 from .adapters import AuditError, autodetect
 from .adapters import inspect_ai  # noqa: F401  (registers itself on import)
 from .checks import REGISTRY
-from .checks.cost import CostReportingCheck
 from .model import SEVERITY_ORDER, Finding, IntegrityModel, Severity
 
 
@@ -51,6 +50,7 @@ def audit(
     adapter_name: str = "auto",
     price_in_per_1m: float = 3.0,
     price_out_per_1m: float = 15.0,
+    budget_per_task_usd: float | None = None,
 ) -> AuditResult:
     target = Path(path)
     if not target.exists():
@@ -67,8 +67,14 @@ def audit(
     bundle = adapter.collect(target)
     model = adapter.normalize(bundle)
 
-    checks = [c for c in REGISTRY if not isinstance(c, CostReportingCheck)]
-    checks.append(CostReportingCheck(price_in_per_1m, price_out_per_1m))
+    # Every check gets the runtime options; checks that need them (token
+    # prices, per-task budget) override Check.with_options. No special-casing.
+    options = {
+        "price_in_per_1m": price_in_per_1m,
+        "price_out_per_1m": price_out_per_1m,
+        "budget_per_task_usd": budget_per_task_usd,
+    }
+    checks = [c.with_options(**options) for c in REGISTRY]
     findings: list[Finding] = []
     for check in checks:
         findings.extend(check.run(model))
@@ -88,9 +94,10 @@ def audit_with_policy(
     fail_on: str = "high",
     price_in_per_1m: float = 3.0,
     price_out_per_1m: float = 15.0,
+    budget_per_task_usd: float | None = None,
 ) -> tuple[AuditResult, bool]:
     """Run the audit; return (result, policy_failed)."""
-    result = audit(path, adapter_name, price_in_per_1m, price_out_per_1m)
+    result = audit(path, adapter_name, price_in_per_1m, price_out_per_1m, budget_per_task_usd)
     levels = _FAIL_ON_LEVELS[fail_on]
     policy_failed = any(f.severity in levels for f in result.findings)
     return result, policy_failed

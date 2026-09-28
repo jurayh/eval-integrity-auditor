@@ -98,8 +98,10 @@ def test_audit_judge_clean_exits_0(tmp_path: Path):
 def test_demo_judge_bad_fixture(tmp_path: Path):
     report = tmp_path / "demo.html"
     result = runner.invoke(app, ["demo", "--fixture", "judge_bad", "--output", str(report)])
-    assert result.exit_code == 1, result.output
+    # Demo always exits 0 (findings are the point of the fixture); `audit` is the gate.
+    assert result.exit_code == 0, result.output
     assert "JUDGE-004" in result.output
+    assert "by design" in result.output
     assert report.is_file()
 
 
@@ -119,3 +121,24 @@ def test_explain_judge_check():
     result = runner.invoke(app, ["explain", "JUDGE-001"])
     assert result.exit_code == 0
     assert "calibration" in result.output
+
+
+def test_demo_cost_wasteful_fixture(tmp_path: Path):
+    report = tmp_path / "demo.html"
+    result = runner.invoke(app, ["demo", "--fixture", "cost_wasteful", "--output", str(report)])
+    # Medium findings only: priced waste, but the score itself is not invalidated.
+    assert result.exit_code == 0, result.output
+    assert "COST-002" in result.output
+    assert "COST-003" in result.output
+    assert "COST-004" in result.output
+    assert "avg tries per success" in result.output
+    assert report.is_file()
+    assert "COST-004" in report.read_text()
+
+
+def test_demo_cost_clean_fixture(tmp_path: Path):
+    report = tmp_path / "demo.html"
+    result = runner.invoke(app, ["demo", "--fixture", "cost_clean", "--output", str(report)])
+    assert result.exit_code == 0, result.output
+    assert "PASS" in result.output
+    assert "COST-002" not in result.output

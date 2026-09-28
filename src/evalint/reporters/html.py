@@ -121,7 +121,7 @@ _TEMPLATE = """\
 
   {% if model.cost_summary %}
   <div class="card">
-    <h2>Cost summary</h2>
+    <h2>Cost and efficiency</h2>
     <table class="map">
       <tr><th>Attempts / successes</th><td>{{ model.cost_summary.attempts }} / {{ model.cost_summary.successes }}</td></tr>
       <tr><th>Tokens in / out</th><td>{{ model.cost_summary.total_tokens_in }} / {{ model.cost_summary.total_tokens_out }}</td></tr>
@@ -129,6 +129,14 @@ _TEMPLATE = """\
       <tr><th>Cost per success</th><td>{% if model.cost_summary.cost_per_success_usd is not none %}${{ "%.4f"|format(model.cost_summary.cost_per_success_usd) }}{% else %}n/a (no successes){% endif %}</td></tr>
       {% if model.cost_summary.avg_tool_calls_per_success is not none %}
       <tr><th>Avg tool calls per success</th><td>{{ model.cost_summary.avg_tool_calls_per_success }}</td></tr>
+      {% endif %}
+      {% if model.cost_summary.avg_tries_per_success is not none %}
+      <tr><th>Avg tries per success</th><td>{{ model.cost_summary.avg_tries_per_success }} (max {{ model.cost_summary.max_tries }} on one attempt)</td></tr>
+      {% endif %}
+      <tr><th>Wasted on non-passing attempts</th><td>${{ "%.4f"|format(model.cost_summary.wasted_usd) }} ({{ "%.0f"|format(model.cost_summary.wasted_share * 100) }}% of spend)</td></tr>
+      <tr><th>Output tokens per attempt</th><td>p50 {{ model.cost_summary.p50_tokens_out }} &middot; p90 {{ model.cost_summary.p90_tokens_out }} &middot; max {{ model.cost_summary.max_tokens_out }} ({{ model.cost_summary.max_tokens_out_task }})</td></tr>
+      {% if model.cost_summary.budget_per_task_usd is not none %}
+      <tr><th>Within ${{ "%.2f"|format(model.cost_summary.budget_per_task_usd) }}/task budget</th><td>{{ model.cost_summary.tasks_within_budget }} / {{ model.cost_summary.tasks_total }} tasks passed</td></tr>
       {% endif %}
     </table>
     <p class="meta">Estimates from ${{ model.cost_summary.price_in_per_1m }}/$ {{ model.cost_summary.price_out_per_1m }} per 1M input/output tokens. Not metered billing.</p>
@@ -162,7 +170,11 @@ _TEMPLATE = """\
 """
 
 
-def render_html(result: AuditResult, version: str = "0.1.0") -> str:
+def render_html(result: AuditResult, version: str | None = None) -> str:
+    if version is None:
+        from .. import __version__ as pkg_version
+
+        version = pkg_version
     env = Environment(autoescape=True)
     template = env.from_string(_TEMPLATE)
     passes = sum(1 for a in result.model.attempts if a.status == "pass")

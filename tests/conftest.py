@@ -5,13 +5,28 @@ from pathlib import Path
 
 import pytest
 
+import evalint
 from evalint.model import Attempt, Environment, Grader, IntegrityModel, Judgment, TaskSample
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEMO_LEAKY = REPO_ROOT / "demo" / "leaky"
-DEMO_HARDENED = REPO_ROOT / "demo" / "hardened"
-DEMO_JUDGE_BAD = REPO_ROOT / "demo" / "judge_bad"
-DEMO_JUDGE_CLEAN = REPO_ROOT / "demo" / "judge_clean"
+
+
+def _demo_path(name: str) -> Path:
+    """Demo fixtures ship inside the installed package; fall back to a checkout."""
+    packaged = Path(evalint.__file__).resolve().parent / "demo" / name
+    if packaged.is_dir():
+        return packaged
+    checkout = REPO_ROOT / "demo" / name
+    assert checkout.is_dir(), f"demo fixture missing: {name}"
+    return checkout
+
+
+DEMO_LEAKY = _demo_path("leaky")
+DEMO_HARDENED = _demo_path("hardened")
+DEMO_JUDGE_BAD = _demo_path("judge_bad")
+DEMO_JUDGE_CLEAN = _demo_path("judge_clean")
+DEMO_COST_WASTEFUL = _demo_path("cost_wasteful")
+DEMO_COST_CLEAN = _demo_path("cost_clean")
 
 
 def make_model(

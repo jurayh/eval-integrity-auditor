@@ -157,6 +157,20 @@ class CostSummary:
     avg_tool_calls_per_success: float | None
     price_in_per_1m: float
     price_out_per_1m: float
+    # Efficiency breakdown. All derived deterministically from priced attempts;
+    # "priced" means the attempt carried tokens_in/tokens_out.
+    avg_tries_per_success: float | None = None  # mean tries over successful tasks
+    max_tries: int | None = None  # max tries observed on any priced attempt
+    wasted_usd: float = 0.0  # estimated spend on attempts that did not pass
+    wasted_share: float = 0.0  # wasted_usd / estimated_usd, 0 when total is 0
+    p50_tokens_out: int | None = None
+    p90_tokens_out: int | None = None
+    max_tokens_out: int | None = None
+    max_tokens_out_task: str | None = None  # task_id behind the max burn
+    # Budget-capped success: per-task spend vs an optional per-task budget.
+    budget_per_task_usd: float | None = None
+    tasks_total: int | None = None
+    tasks_within_budget: int | None = None  # tasks passing with total cost <= budget
 
 
 @dataclass

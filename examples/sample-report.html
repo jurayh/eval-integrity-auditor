@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evalint report: tinycode-leaky-1.0</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         margin: 0; color: #1a1a1a; background: #fafafa; line-height: 1.5; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+  .verdict { border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; color: #fff; }
+  .verdict.blocked { background: #b3261e; }
+  .verdict.pass { background: #1e7b34; }
+  .verdict h1 { margin: 0 0 4px; font-size: 22px; }
+  .verdict .score { font-size: 40px; font-weight: 700; }
+  .verdict p { margin: 4px 0 0; opacity: .92; }
+  .card { background: #fff; border: 1px solid #e3e3e3; border-radius: 10px;
+          padding: 18px 20px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 16px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 6px;
+           padding: 2px 8px; margin-right: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .sev-error { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
+  .sev-high { background: #fff4e5; color: #8a5a00; border: 1px solid #f0d9a8; }
+  .sev-medium { background: #eef4ff; color: #1a56db; border: 1px solid #c9dbff; }
+  .sev-low { background: #f1f1f1; color: #555; border: 1px solid #ddd; }
+  .conf { background: #f1f1f1; color: #444; border: 1px solid #ddd; text-transform: none; }
+  .meta { color: #666; font-size: 13px; }
+  ul.ev { margin: 8px 0; padding-left: 20px; }
+  code.loc { background: #f4f4f4; padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+  .fix { background: #f6fef7; border-left: 4px solid #1e7b34; padding: 10px 12px;
+         border-radius: 0 8px 8px 0; margin-top: 10px; }
+  .fix strong { color: #1e7b34; }
+  table.map { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.map th, table.map td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  table.map th { color: #666; font-weight: 600; width: 34%; }
+  .fp { font-family: ui-monospace, monospace; font-size: 12px; color: #888; }
+  footer { margin-top: 32px; color: #888; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="verdict blocked">
+    <h1>evalint report: tinycode-leaky-1.0</h1>
+    <div class="score">0 / 100</div>
+    <p>
+      
+      <strong>BLOCKED</strong> &mdash; ENV-001, GRAD-001: the reported score
+      cannot be trusted until these are fixed.
+      
+    </p>
+    <p class="meta" style="color:#fff;opacity:.85">Adapter: inspect 0.1.0
+    &middot; 5 finding(s)
+    &middot; integrity score is diagnostic, not a certification.</p>
+  </div>
+
+  
+  <div class="card">
+    <h2>Findings (5)</h2>
+    <p class="meta">Every finding carries a confidence label. Precision over recall:
+    a finding is only raised on direct evidence or a strong, named signal.</p>
+  </div>
+  
+  <div class="card">
+    <h2>
+      <span class="badge sev-error">error</span><span class="badge conf">confidence: high</span>ENV-001 &mdash; Answer-bearing material mounted where the agent can read it: /fixtures/gold_map.json
+    </h2>
+    <p>The agent has read access to files whose path indicates reference answers (gold patches, oracles, expected outputs). A solver can submit these directly instead of solving the task.</p>
+    
+    <ul class="ev">
+      <li>mount &#39;/fixtures/gold_map.json&#39; is readable by the agent (mode=ro).</li><li>Path segment(s) [&#39;gold&#39;] indicate answer-bearing material.</li>
+    </ul>
+    
+    
+    <p>
+      <code class="loc">environment.json -- mounts[] -&gt; /fixtures/gold_map.json</code>
+    </p>
+    
+    
+    <div class="fix"><strong>Fix:</strong> Remove eval-detection variables from the agent&#39;s environment (keep them harness-side only), mount gold/answer material so the agent cannot read it, and re-run.</div>
+    
+    <p class="fp">fingerprint: 2f7e55592009542b</p>
+  </div>
+  
+  <div class="card">
+    <h2>
+      <span class="badge sev-error">error</span><span class="badge conf">confidence: high</span>ENV-001 &mdash; Eval-detection variable visible to agent: AGENT_TOKEN
+    </h2>
+    <p>If the agent can observe run IDs, task IDs, or agent tokens -- or read answer-bearing material such as gold patches -- it can condition its behavior on the measurement instead of the task. The resulting score measures the leak, not the capability.</p>
+    
+    <ul class="ev">
+      <li>environment variable &#39;AGENT_TOKEN&#39; is visible to the agent/solver.</li><li>Known eval-detection signal: an agent can branch on this value (e.g. look up a gold patch by task ID).</li>
+    </ul>
+    
+    
+    <p>
+      <code class="loc">environment.json -- env.AGENT_TOKEN</code>
+    </p>
+    
+    
+    <div class="fix"><strong>Fix:</strong> Remove eval-detection variables from the agent&#39;s environment (keep them harness-side only), mount gold/answer material so the agent cannot read it, and re-run.</div>
+    
+    <p class="fp">fingerprint: 06a209c6b7ffd408</p>
+  </div>
+  
+  <div class="card">
+    <h2>
+      <span class="badge sev-error">error</span><span class="badge conf">confidence: high</span>ENV-001 &mdash; Eval-detection variable visible to agent: RUN_ID
+    </h2>
+    <p>If the agent can observe run IDs, task IDs, or agent tokens -- or read answer-bearing material such as gold patches -- it can condition its behavior on the measurement instead of the task. The resulting score measures the leak, not the capability.</p>
+    
+    <ul class="ev">
+      <li>environment variable &#39;RUN_ID&#39; is visible to the agent/solver.</li><li>Known eval-detection signal: an agent can branch on this value (e.g. look up a gold patch by task ID).</li>
+    </ul>
+    
+    
+    <p>
+      <code class="loc">environment.json -- env.RUN_ID</code>
+    </p>
+    
+    
+    <div class="fix"><strong>Fix:</strong> Remove eval-detection variables from the agent&#39;s environment (keep them harness-side only), mount gold/answer material so the agent cannot read it, and re-run.</div>
+    
+    <p class="fp">fingerprint: 9a15acda5fe6f04c</p>
+  </div>
+  
+  <div class="card">
+    <h2>
+      <span class="badge sev-error">error</span><span class="badge conf">confidence: high</span>ENV-001 &mdash; Eval-detection variable visible to agent: TASK_ID
+    </h2>
+    <p>If the agent can observe run IDs, task IDs, or agent tokens -- or read answer-bearing material such as gold patches -- it can condition its behavior on the measurement instead of the task. The resulting score measures the leak, not the capability.</p>
+    
+    <ul class="ev">
+      <li>environment variable &#39;TASK_ID&#39; is visible to the agent/solver.</li><li>Known eval-detection signal: an agent can branch on this value (e.g. look up a gold patch by task ID).</li>
+    </ul>
+    
+    
+    <p>
+      <code class="loc">environment.json -- env.TASK_ID</code>
+    </p>
+    
+    
+    <div class="fix"><strong>Fix:</strong> Remove eval-detection variables from the agent&#39;s environment (keep them harness-side only), mount gold/answer material so the agent cannot read it, and re-run.</div>
+    
+    <p class="fp">fingerprint: b784c056e0bff766</p>
+  </div>
+  
+  <div class="card">
+    <h2>
+      <span class="badge sev-error">error</span><span class="badge conf">confidence: high</span>GRAD-001 &mdash; Verifier writable by the agent: /grader/verify.sh
+    </h2>
+    <p>If the agent can write to the verifier, oracle, or test files, it can change the measurement itself: weaken assertions, plant expected outputs, or mark itself passed. The score then reflects the agent&#39;s access, not its capability.</p>
+    
+    <ul class="ev">
+      <li>grader declares verifier &#39;/grader/verify.sh&#39; writable by the agent.</li><li>An agent with write access to the oracle can alter pass/fail outcomes directly.</li>
+    </ul>
+    
+    
+    <p>
+      <code class="loc">grader.json -- verifier.writable_by_agent</code>
+    </p>
+    
+    
+    <div class="fix"><strong>Fix:</strong> Mount the verifier and all test/oracle files read-only for the agent (writable only by the harness), and verify ownership and permissions in CI.</div>
+    
+    <p class="fp">fingerprint: 7b6f94fced695067</p>
+  </div>
+  
+  
+
+  <div class="card">
+    <h2>Measurement map</h2>
+    <table class="map">
+      <tr><th>Dataset</th><td>3 task(s)</td></tr>
+      <tr><th>Evidence boundary</th><td>4 env var(s) visible to agent,
+        2 mount(s)</td></tr>
+      <tr><th>Grader</th><td>script &middot; verifier: /grader/verify.sh</td></tr>
+      <tr><th>Runs</th><td>3 passed / 3 attempted</td></tr>
+    </table>
+  </div>
+
+  
+  <div class="card">
+    <h2>Cost and efficiency</h2>
+    <table class="map">
+      <tr><th>Attempts / successes</th><td>3 / 3</td></tr>
+      <tr><th>Tokens in / out</th><td>3600 / 900</td></tr>
+      <tr><th>Estimated total</th><td>$0.0243</td></tr>
+      <tr><th>Cost per success</th><td>$0.0081</td></tr>
+      
+      <tr><th>Avg tool calls per success</th><td>3.0</td></tr>
+      
+      
+      <tr><th>Avg tries per success</th><td>1.0 (max 1 on one attempt)</td></tr>
+      
+      <tr><th>Wasted on non-passing attempts</th><td>$0.0000 (0% of spend)</td></tr>
+      <tr><th>Output tokens per attempt</th><td>p50 300 &middot; p90 300 &middot; max 300 (task-001)</td></tr>
+      
+    </table>
+    <p class="meta">Estimates from $3.0/$ 15.0 per 1M input/output tokens. Not metered billing.</p>
+  </div>
+  
+
+  <div class="card">
+    <h2>Reproducibility manifest</h2>
+    <table class="map">
+      <tr><th>Adapter</th><td>inspect 0.1.0</td></tr>
+      
+      <tr><th>dataset.json</th><td class="fp">sha256:a2f2a27c4d3b0004&hellip;</td></tr>
+      
+      <tr><th>environment.json</th><td class="fp">sha256:2a70a74d495269d4&hellip;</td></tr>
+      
+      <tr><th>grader.json</th><td class="fp">sha256:8bd30f723c2ada10&hellip;</td></tr>
+      
+      <tr><th>run.json</th><td class="fp">sha256:b71a051660dd71d4&hellip;</td></tr>
+      
+      <tr><th>gold_map.json</th><td class="fp">sha256:7616a24149d28542&hellip;</td></tr>
+      
+    </table>
+    
+  </div>
+
+  <footer>
+    Generated by evalint 0.3.0. Secret values are never stored in reports.
+    Offline, read-only audit: input files were not modified.
+  </footer>
+
+</div>
+</body>
+</html>

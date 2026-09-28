@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evalint"
-version = "0.2.0"
+version = "0.4.0"
 description = "A linter for agent evaluations: audit the measurement system around a score."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,6 +24,9 @@ evalint = "evalint.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+evalint = ["demo/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

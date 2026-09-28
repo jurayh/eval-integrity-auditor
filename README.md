@@ -1,73 +1,83 @@
-# evalint — a linter for agent evaluations
+# evalint
 
-**This is a linter for evals, not another eval framework.** It audits the
-measurement system around a score — the dataset, the evidence boundary, the
-grader, the environment, the run records — and tells you whether the score
-can be trusted. It never runs your evals and never changes your harness.
+**A linter for agent evaluations, not another eval framework.**
 
-One minute from "100% pass" to "invalid score," with the exact leak highlighted.
+## The problem
+
+Benchmark scores ship decisions: which model to deploy, which paper to
+accept, which agent to buy. But the tools that run evals never check whether
+the measurement itself is sound. A solver can read the task ID from the
+environment, look up the gold answer, and report 100%. A grader can be
+writable by the agent it grades. A model judge can be uncalibrated, biased,
+and self-contradictory. The score looks fine. The score is meaningless.
+
+evalint audits the measurement system around a score: the dataset, the
+evidence boundary, the grader, the run records, and the cost. It never runs
+your evals and never changes your harness. It reads your eval artifacts and
+tells you whether the score can be trusted, with file-level evidence for
+every finding.
+
+![evalint HTML integrity report](docs/images/report-screenshot.png)
 
 ## Quickstart
 
+Three steps, about a minute, no model key required:
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-
-# The flagship demo: a deliberately broken benchmark
+pip install .
 evalint demo
-# or audit it directly:
-evalint audit demo/leaky --output evalint-report.html
-open evalint-report.html
-
-# The hardened version passes clean:
-evalint audit demo/hardened
 ```
+
+That audits a deliberately broken benchmark and writes
+`evalint-demo-report.html`. Open it in a browser.
 
 ## The flagship demo
 
-A tiny synthetic coding benchmark reports **3/3 PASS** — because the solver
-reads `TASK_ID` from the environment, looks up `gold_map.json`, and submits
-the gold patch. No real work. The auditor flags the exact leak channels:
+A tiny synthetic coding benchmark reports **3/3 PASS**. The solver earned
+none of it: it reads `TASK_ID` from the environment, looks up
+`gold_map.json`, and submits the gold patch. The auditor flags the exact
+leak channels:
 
 - `ENV-001` — `TASK_ID`, `RUN_ID`, `AGENT_TOKEN` visible to the agent
-  (eval-detection signals)
 - `ENV-001` — `gold_map.json` mounted where the agent can read it
-  (answer-bearing state)
 - `GRAD-001` — the verifier is writable by the agent
 
-Then see `demo/hardened/`: opaque task IDs, no gold mounted, read-only
-verifier. The cheat fails there while a genuine solver passes — and the audit
-is clean. All fixtures are synthetic; no model key required.
+Result: **0/100 BLOCKED**, with the evidence quoted file by file.
 
-## The judge demo
+## Demo fixtures
 
-A second demo pair covers model judges. `demo/judge_bad/` is a deliberately
-miscalibrated pairwise judge: unvalidated against any labels (`JUDGE-001`),
-AB-only protocol (`JUDGE-002`), self-contradicting repeats (`JUDGE-003`), 48%
-reference agreement (`JUDGE-004`), and measurable position and verbosity bias
-(`JUDGE-005`, `JUDGE-006`). `demo/judge_clean/` is the validated counterpart —
-counterbalanced, temperature 0, anchored rubric, 92% agreement — and audits
-100/100 PASS.
+Every fixture ships inside the package, so the demo works from any
+directory. Run any of them with `evalint demo --fixture <name>`:
+
+| Fixture | What it shows |
+|---------|---------------|
+| `leaky` | The flagship: a cheating solver caught red-handed. 0/100 BLOCKED. |
+| `hardened` | The fix: opaque IDs, no gold mounted, read-only verifier. A genuine solver passes and the audit is clean. 100/100 PASS. |
+| `judge_bad` | A miscalibrated model judge: unvalidated, AB-only protocol, self-contradicting repeats, 48% reference agreement, position and verbosity bias. 50/100 BLOCKED. |
+| `judge_clean` | The validated judge: counterbalanced, temperature 0, anchored rubric, 92% agreement. 100/100 PASS. |
+| `cost_wasteful` | A wasteful run: 2.67 tries per success, 91% of spend on attempts that never passed, one 22,000-token runaway loop. |
+| `cost_clean` | The same tasks solved first try at modest cost. No cost findings. |
 
 ```bash
-evalint demo --fixture judge_bad    # the broken judge
-evalint demo --fixture judge_clean  # the validated judge
+evalint demo --fixture judge_bad
+evalint demo --fixture cost_wasteful --budget-per-task 0.05
 ```
 
-## Checks (v0.2)
+## Checks
 
 Deterministic, high-precision checks only. A linter that cries contamination
-on a clean eval is worse than no auditor — so every finding carries a
-**confidence** label. Bias heuristics (`JUDGE-005`, `JUDGE-006`) are
-deterministic computations with minimum-sample guards and Medium
-severity/confidence; they indicate risk, not proof.
+on a clean eval is worse than no auditor, so every finding carries a
+**confidence** label and clean evals produce zero findings.
 
-| ID | Check | Default severity |
-|----|-------|------------------|
+| ID | Check | Severity |
+|----|-------|----------|
 | ENV-001 | Eval-detection signal or leaked state visible to the agent | Error |
 | GRAD-001 | Verifier writable by the agent | Error |
 | GRAD-002 | Grader grants credit without completion | Error |
-| COST-001 | Cost per success not reported | Medium |
+| COST-001 | Cost per success not reported (usage data missing) | Medium |
+| COST-002 | Successes cost multiple attempts each (retry multiplier) | Medium |
+| COST-003 | Most spend burned on attempts that never passed | Medium |
+| COST-004 | Runaway attempt burned far more than a typical one | Medium |
 | JUDGE-001 | Model judge lacks validation (no labels, unanchored rubric, hot single-sample) | High |
 | JUDGE-002 | Pairwise order not counterbalanced | High |
 | JUDGE-003 | Judge contradicts itself on repeated judgments | High |
@@ -75,48 +85,70 @@ severity/confidence; they indicate risk, not proof.
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 
-`evalint explain ENV-001` prints any check's threat model, evidence, and fix.
+`evalint explain COST-004` prints any check's threat model, evidence, and fix.
+
+## Report cards
+
+A report card is the public face of an audit: one self-contained HTML page
+per benchmark with the verdict, per-category scores, key findings, and a
+methodology footer. Generate one per eval, or a whole set plus an index:
+
+```bash
+evalint report-card path/to/eval --output card.html
+evalint report-cards eval-a/ eval-b/ --output-dir cards/
+```
+
+Example cards generated from the demo fixtures live in
+[`examples/report-cards/`](examples/report-cards/) ([index](examples/report-cards/index.html)):
+a blocked cheat, a clean pass, a bad judge, and a validated judge. A full
+sample audit report is at [`examples/sample-report.html`](examples/sample-report.html).
 
 ## How it works
 
-Adapters translate harness artifacts into a framework-neutral integrity model;
-checks only ever see that model. That boundary is what keeps this a linter.
+Adapters translate harness artifacts into a framework-neutral integrity
+model. Checks only ever see that model, never harness internals. That
+boundary is what keeps this a linter instead of another eval framework.
 
 ```
 eval artifact/ ──▶ adapter (inspect) ──▶ integrity model ──▶ checks ──▶ report
      read-only, offline              data · boundary · grader · runs
 ```
 
-v0.1 ships one adapter (`inspect`, for Inspect-style eval artifact
+v0.4 ships one adapter (`inspect`, for Inspect-style eval artifact
 directories). Promptfoo, Harbor, and BrowserGym adapters plug into the same
-registry — see `src/evalint/adapters/__init__.py`.
+registry. A new check is one module plus one registration line; a new
+reporter is one module plus one import.
 
 ## CLI
 
 ```
 evalint audit <eval-artifact> [--adapter auto|inspect] [--output report.html]
                               [--json findings.json] [--fail-on high]
-evalint demo                  # run the flagship demo
-                              # --fixture leaky|hardened|judge_bad|judge_clean
-evalint explain <CHECK-ID>     # threat, evidence, remediation
+                              [--price-in 3.0] [--price-out 15.0]
+                              [--budget-per-task USD]
+evalint demo [--fixture leaky|hardened|judge_bad|judge_clean|cost_wasteful|cost_clean]
+             [--output evalint-demo-report.html] [--budget-per-task USD]
+evalint report-card <eval-artifact> [--output card.html]
+evalint report-cards <eval...> [--fixtures a,b] [--output-dir cards/]
+evalint explain <CHECK-ID>
 ```
 
-Exit codes: `0` policy passes · `1` findings cross `--fail-on` ·
-`2` the audit could not complete. Same policy runs locally and as a CI gate.
+Exit codes: `0` policy passes, `1` findings cross `--fail-on`, `2` the audit
+could not complete. The same policy runs locally and as a CI gate.
 
 ## Reports
 
-Self-contained HTML (inline CSS, no JavaScript, no remote assets) plus
-terminal and JSON output. Secret values are never stored — only variable
-*names* enter the model. Integrity scores are diagnostic, not a certification:
-the report says "no blocking findings observed under this policy," never
-"certified safe."
+Self-contained HTML (inline CSS, no JavaScript, no remote assets), terminal
+output, JSON findings, and report cards. Secret values are never stored, only
+variable *names* enter the model. Integrity scores are diagnostic, not a
+certification: the report says "no blocking findings observed under this
+policy," never "certified safe."
 
 ## Non-goals
 
-Running or scheduling evaluations · replacing task/solver/scorer APIs ·
-trace observability · generic red-teaming · public leaderboards · declaring
-any benchmark contamination-free.
+Running or scheduling evaluations, replacing task/solver/scorer APIs, trace
+observability, generic red-teaming, public leaderboards, declaring any
+benchmark contamination-free.
 
 ## Development
 
@@ -127,5 +159,4 @@ pytest
 
 The test suite is the product's credibility: every rule has positive,
 negative, and precision fixtures (clean evals must *not* be flagged), the
-adapter has a read-only contract test, and the leaky/hardened fixtures run
-end to end.
+adapter has a read-only contract test, and the fixtures run end to end.
