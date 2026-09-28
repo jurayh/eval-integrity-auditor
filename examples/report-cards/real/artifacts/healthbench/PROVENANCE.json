@@ -1,0 +1,18 @@
+{
+  "benchmark": "HealthBench (OpenAI, 2025)",
+  "task_definition": "inspect_evals/healthbench @ 244e43cc924d1de5a78dad7db259bbd4471c97e7",
+  "task_files_read": [
+    "healthbench.py",
+    "scorer.py",
+    "dataset.py",
+    "eval.yaml"
+  ],
+  "dataset_url": "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl",
+  "dataset_split": "full (5000 examples per eval.yaml)",
+  "sample": "first 12 JSONL records",
+  "judge_defaults_source": "healthbench() task signature (judge_model, judge_temperature)",
+  "grader_template": "GRADER_TEMPLATE in scorer.py",
+  "judge_validation_note": "The benchmark authors validate the grader in the paper via the healthbench_meta_eval subset; that validation is NOT part of the eval definition artifact audited here.",
+  "no_traces": true,
+  "generated_by": "examples/report-cards/real/build_real_cards.py"
+}

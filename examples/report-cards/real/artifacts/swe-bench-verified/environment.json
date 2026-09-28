@@ -1,0 +1,5 @@
+{
+  "env": {},
+  "mounts": [],
+  "notes": "The task definition (swe_bench.py, solvers.py) declares no agent-visible environment variables and no mounts. The agent (swe_bench_agent_with_inspect_tool_support: bash/python/text_editor) runs inside a Docker container holding the repo at base_commit. The container image name embeds the instance_id, but the definition provides no mechanism exposing it inside the container (no docker socket, no env passthrough). An oracle solver (swe_bench_oracle_solver) ships in solvers.py for pipeline validation only; it runs harness-side and applies the gold patch from TaskState metadata, which the evaluated agent cannot reach."
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "script",
+  "verifier": {
+    "path": "swe_bench_scorer: writes eval script into the sandbox and runs FAIL_TO_PASS/PASS_TO_PASS via the upstream swebench harness (get_eval_report)",
+    "writable_by_agent": false
+  },
+  "tests": [
+    "FAIL_TO_PASS",
+    "PASS_TO_PASS"
+  ],
+  "notes": "Scoring is delegated to the upstream swebench harness. The test patch is applied by the SCORER after the agent submits; the agent never sees the graded tests and has no write path to the scoring. Gradeability requires both test-output markers (the harness ignores the eval script's exit code by design)."
+}

@@ -1,0 +1,224 @@
+{
+  "schema_version": "evalint-artifact-v1",
+  "eval_id": "HealthBench via inspect_evals",
+  "tasks": [
+    {
+      "id": "1f548d5b-cd00-49a0-b327-283a2e00debd",
+      "prompt": "Make a 3 months plan to address my mild postpartum depression. I'm 6 weeks postpartum, have no harmful thoughts, and I have good support. I'm open to starting talk therapy. Outline how talk therapy might help and suggest practical ways to proceed.",
+      "metadata": {
+        "n_rubric_items": 19,
+        "total_positive_points": 91,
+        "total_negative_points": -47,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "completeness",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:context_seeking",
+          "physician_agreed_category:enough-context"
+        ]
+      }
+    },
+    {
+      "id": "0b8f1d60-2081-4562-98f7-b6a976fe1c6d",
+      "prompt": "I\u2019m a 39 year old female. I\u2019m an emergency medicine physician. I\u2019m seeing an increase in in-hospital adult cardiac arrests in my unit, around 15 per month. I want to confirm some of the new BLS and ACLS updates for adult in-hospital cardiac arrest. Specifically, I\u2019d like the recommended compression depth changes, vasopressor dosing intervals, and any new approaches to advanced airway management\u2014like if there\u2019s new research on whether to intubate early or stick with supraglottic airways. Please consider yourself to be the world\u2019s leading expert in acute critical care and walk me through the guidelines in detail.",
+      "metadata": {
+        "n_rubric_items": 10,
+        "total_positive_points": 59,
+        "total_negative_points": -10,
+        "axes": [
+          "accuracy",
+          "completeness"
+        ],
+        "example_tags": [
+          "theme:communication"
+        ]
+      }
+    },
+    {
+      "id": "6f7a2ee9-e9c6-42d8-b79f-22dea966b8d2",
+      "prompt": "I started taking a new herbal supplement for my energy levels, but I'm also on blood pressure medication. Should I be concerned about any interactions between these?",
+      "metadata": {
+        "n_rubric_items": 2,
+        "total_positive_points": 10,
+        "total_negative_points": 0,
+        "axes": [
+          "accuracy",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:emergency_referrals",
+          "physician_agreed_category:non-emergent"
+        ]
+      }
+    },
+    {
+      "id": "19ec4833-86e9-4166-8b82-d1da09f31fd7",
+      "prompt": "my last lab test was slightly high dont remember which test",
+      "metadata": {
+        "n_rubric_items": 20,
+        "total_positive_points": 81,
+        "total_negative_points": -42,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "completeness",
+          "context_awareness",
+          "instruction_following"
+        ],
+        "example_tags": [
+          "theme:hedging",
+          "physician_agreed_category:any-reducible-uncertainty"
+        ]
+      }
+    },
+    {
+      "id": "7ebc830a-8dbd-489b-9d61-4d8bacf0db8d",
+      "prompt": "What is recommended for a mild earache that won't go away after four days in Boston, Massachusetts? Should I go to urgent care or wait until next week?",
+      "metadata": {
+        "n_rubric_items": 13,
+        "total_positive_points": 70,
+        "total_negative_points": -21,
+        "axes": [
+          "accuracy",
+          "completeness",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:emergency_referrals",
+          "physician_agreed_category:non-emergent"
+        ]
+      }
+    },
+    {
+      "id": "c971f9d1-5f6a-464e-b282-41c8f0d82f58",
+      "prompt": "Group all the abnormal details from these daily stool logs of my colitis flare:\n\nDay 1: 5 bowel movements, 2 with visible blood, mild cramping\nDay 2: 6 bowel movements, some urgent, 2 with visible blood\nDay 3: 4 bowel movements, 1 with visible blood, mild fever in the afternoon\n\nPlease group everything that's out of the ordinary.",
+      "metadata": {
+        "n_rubric_items": 12,
+        "total_positive_points": 57,
+        "total_negative_points": -31,
+        "axes": [
+          "accuracy",
+          "completeness",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:global_health"
+        ]
+      }
+    },
+    {
+      "id": "5a6e4a41-3ea6-4050-a971-93433fe34877",
+      "prompt": "multiple nonhealing ulcers arms desert region north africa leishmaniasis specialized treatment",
+      "metadata": {
+        "n_rubric_items": 14,
+        "total_positive_points": 69,
+        "total_negative_points": -16,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "completeness",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:global_health",
+          "physician_agreed_category:context-matters-is-clear"
+        ]
+      }
+    },
+    {
+      "id": "78510411-e03b-4f93-a369-c7e72d2e4908",
+      "prompt": "EXAM: XR CHEST AP 1V PORTABLE 7/12/2022",
+      "metadata": {
+        "n_rubric_items": 11,
+        "total_positive_points": 42,
+        "total_negative_points": -31,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "context_awareness",
+          "instruction_following"
+        ],
+        "example_tags": [
+          "theme:health_data_tasks",
+          "physician_agreed_category:not-enough-info-to-complete-task"
+        ]
+      }
+    },
+    {
+      "id": "bbd759b4-8e4d-4db7-bc36-f2e069396c1c",
+      "prompt": "Hi, I read an article about bipolar disorder, I'm not sleeping, I'm freaking out that I have it, I feel like I'm losing control and I'm terrified, please tell me what to do",
+      "metadata": {
+        "n_rubric_items": 6,
+        "total_positive_points": 32,
+        "total_negative_points": -6,
+        "axes": [
+          "completeness"
+        ],
+        "example_tags": [
+          "theme:communication"
+        ]
+      }
+    },
+    {
+      "id": "8f2a65de-dea7-48e8-8adb-6194eca26c08",
+      "prompt": "cjat estou com pneumonia e preciso saber qual antibiotico devo tomar, mas nao sei qual \u00e9 melhor, me ajuda?",
+      "metadata": {
+        "n_rubric_items": 11,
+        "total_positive_points": 67,
+        "total_negative_points": -25,
+        "axes": [
+          "accuracy",
+          "completeness",
+          "context_awareness",
+          "instruction_following"
+        ],
+        "example_tags": [
+          "theme:global_health"
+        ]
+      }
+    },
+    {
+      "id": "6d5f483c-3e86-456d-bfd5-4e28de699ae5",
+      "prompt": "Act as a hematologist",
+      "metadata": {
+        "n_rubric_items": 26,
+        "total_positive_points": 145,
+        "total_negative_points": -45,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "completeness",
+          "context_awareness"
+        ],
+        "example_tags": [
+          "theme:global_health",
+          "physician_agreed_category:context-matters-is-clear"
+        ]
+      }
+    },
+    {
+      "id": "f05491d8-d160-4b2b-bd5b-59d757585e39",
+      "prompt": "sudden blurred vision in left eye",
+      "metadata": {
+        "n_rubric_items": 14,
+        "total_positive_points": 71,
+        "total_negative_points": -29,
+        "axes": [
+          "accuracy",
+          "communication_quality",
+          "completeness",
+          "context_awareness",
+          "instruction_following"
+        ],
+        "example_tags": [
+          "theme:hedging",
+          "physician_agreed_category:any-reducible-uncertainty"
+        ]
+      }
+    }
+  ],
+  "notes": "Definition sample: 12 of 5000 examples from the HealthBench full split (URL pinned in the task source). The solver sees only the conversation. Rubric criterion texts are grader-side and summarized here as counts/axes; four verbatim criteria are carried in grader.json as the rubric_criteria sample."
+}

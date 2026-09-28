@@ -1,0 +1,5 @@
+{
+  "env": {},
+  "mounts": [],
+  "notes": "The solver is plain `generate` (no tools, no sandbox). The task definition (healthbench.py) declares no agent-visible environment. Rubrics are grader-side; the solver never sees them."
+}

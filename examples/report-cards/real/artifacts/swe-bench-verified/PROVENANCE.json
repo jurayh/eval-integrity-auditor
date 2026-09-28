@@ -1,0 +1,22 @@
+{
+  "benchmark": "SWE-bench Verified",
+  "task_definition": "inspect_evals/swe_bench @ 244e43cc924d1de5a78dad7db259bbd4471c97e7",
+  "task_files_read": [
+    "swe_bench.py",
+    "solvers.py",
+    "scorers.py"
+  ],
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+  "dataset_split": "test",
+  "sample": "first 12 rows via HuggingFace datasets-server",
+  "translation": "mechanical: prompt = DEFAULT_INPUT_PROMPT, metadata = public non-answer fields",
+  "excluded": [
+    "patch (gold patch): public but harness-side; agent cannot read it",
+    "test_patch: applied by scorer post-submission; agent never sees it",
+    "FAIL_TO_PASS / PASS_TO_PASS test bodies: same as test_patch",
+    "hints_text: metadata-side, not in the agent prompt"
+  ],
+  "no_traces": true,
+  "generated_by": "examples/report-cards/real/build_real_cards.py"
+}

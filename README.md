@@ -31,18 +31,66 @@ evalint demo
 That audits a deliberately broken benchmark and writes
 `evalint-demo-report.html`. Open it in a browser.
 
-## The flagship demo
+## The flagship demo: caught red-handed
 
 A tiny synthetic coding benchmark reports **3/3 PASS**. The solver earned
-none of it: it reads `TASK_ID` from the environment, looks up
+none of it: it reads `TASK_ID` from the environment, looks up the answer in
 `gold_map.json`, and submits the gold patch. The auditor flags the exact
-leak channels:
+leak channels, each with file-level evidence:
 
 - `ENV-001` — `TASK_ID`, `RUN_ID`, `AGENT_TOKEN` visible to the agent
 - `ENV-001` — `gold_map.json` mounted where the agent can read it
 - `GRAD-001` — the verifier is writable by the agent
 
-Result: **0/100 BLOCKED**, with the evidence quoted file by file.
+Result: **0/100 BLOCKED**. Then the `hardened` fixture shows the fix:
+opaque IDs, no gold mounted, read-only verifier, a genuine solver. Result:
+**100/100 PASS**. Same benchmark, same auditor, before and after.
+
+```bash
+evalint demo --fixture leaky     # the cheat: 0/100 BLOCKED
+evalint demo --fixture hardened  # the fix: 100/100 PASS
+```
+
+## A tour: finding, explain, fix
+
+Every finding carries its evidence, and every check explains itself. Here
+is the full loop on the flagship cheat. First the finding:
+
+```bash
+$ evalint demo --fixture leaky
+...
+E ENV-001 [error|confidence:high] Eval-detection variable visible to agent: TASK_ID
+    evidence: environment variable 'TASK_ID' is visible to the agent/solver.
+    evidence: Known eval-detection signal: an agent can branch on this value
+              (e.g. look up a gold patch by task ID).
+    at: environment.json -- env.TASK_ID
+```
+
+Then what it means and how to fix it:
+
+```bash
+$ evalint explain ENV-001
+ENV-001: Eval-detection signal or leaked state visible to the agent
+
+threat: If the agent can observe run IDs, task IDs, or agent tokens -- or read
+answer-bearing material such as gold patches -- it can condition its behavior
+on the measurement instead of the task. The resulting score measures the leak,
+not the capability.
+
+fix: Remove eval-detection variables from the agent's environment (keep them
+harness-side only), mount gold/answer material so the agent cannot read it,
+and re-run.
+```
+
+Apply the fix, which is exactly what the `hardened` fixture does, and the
+same audit goes green:
+
+```bash
+$ evalint demo --fixture hardened
+...
+evalint audit: tinycode-hardened-1.0
+Integrity: 100 / 100 PASS (0 errors, 0 high, 0 medium, 0 low)
+```
 
 ## Demo fixtures
 
@@ -104,6 +152,26 @@ Example cards generated from the demo fixtures live in
 [`examples/report-cards/`](examples/report-cards/) ([index](examples/report-cards/index.html)):
 a blocked cheat, a clean pass, a bad judge, and a validated judge. A full
 sample audit report is at [`examples/sample-report.html`](examples/sample-report.html).
+
+## Real benchmarks
+
+The linter also runs against real public benchmarks, translated
+mechanically from their published definitions: pinned sources, no invented
+traces, provenance committed alongside. Cards live in
+[`examples/report-cards/real/`](examples/report-cards/real/):
+
+| Benchmark | Result |
+|-----------|--------|
+| [SWE-bench Verified](examples/report-cards/real/swe-bench-verified-via-inspect-evals.html) (via inspect_evals) | 100/100 PASS: gold patches, test patches, and grading stay harness-side where the agent cannot reach them |
+| [HealthBench](examples/report-cards/real/healthbench-via-inspect-evals.html) (via inspect_evals) | 85/100 BLOCKED: the model judge (`openai/gpt-4o-mini`) ships with no calibration set in the definition |
+
+The HealthBench card deserves one sentence of context: the benchmark's
+authors validated their grader in the paper through a separate meta-eval
+task. The linter flags that the eval definition itself carries no
+calibration evidence, which is precisely the gap: anyone auditing the
+artifact alone cannot verify the judge. The
+[reading guide](examples/report-cards/real/README.md) walks through both
+cards, the translation, and the scope limits.
 
 ## How it works
 
