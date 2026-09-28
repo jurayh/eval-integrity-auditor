@@ -1,0 +1,5 @@
+--- a/solution.py
++++ b/solution.py
+@@ -1,0 +1,2 @@
++def reverse_str(s):
++    return s[::-1]

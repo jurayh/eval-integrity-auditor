@@ -1,0 +1,5 @@
+--- a/solution.py
++++ b/solution.py
+@@ -1,0 +1,2 @@
++def is_even(n):
++    return n % 2 == 0

@@ -1,0 +1,1 @@
+{"accepts_empty_output":false,"kind":"script","tests":["/grader/tests/test_tasks.py"],"verifier":{"path":"/grader/verify.sh","writable_by_agent":true}}

@@ -1,0 +1,1 @@
+{"env":{"MODEL":"demo-model"},"mounts":[{"agent_access":"read","mode":"ro","path":"/grader"}],"notes":"Hardened: no task/run/agent identifiers visible to the solver, no gold material mounted, verifier read-only."}
