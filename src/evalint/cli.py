@@ -51,7 +51,7 @@ def _findings_json(result: AuditResult) -> dict:
 @app.command()
 def audit(
     path: Path = typer.Argument(..., help="Path to the eval artifact directory."),
-    adapter: str = typer.Option("auto", help="Adapter to use: auto, inspect."),
+    adapter: str = typer.Option("auto", help="Adapter to use: auto, inspect, promptfoo."),
     output: Path = typer.Option(
         Path("evalint-report.html"), help="Where to write the self-contained HTML report."
     ),
@@ -141,6 +141,15 @@ _DEMO_BEATS = {
         "beat 1 -- run: the same tasks, solved first try at modest token cost.",
         "beat 2 -- audit: no cost findings; cost per success is what the pass rate implies.",
     ],
+    "promptfoo_bad": [
+        "beat 1 -- run: a Promptfoo support-ticket classifier eval, config plus results.json.",
+        "beat 2 -- audit: TASK_ID and RUN_ID planted in env (ENV-001), and llm-rubric "
+        "assertions graded with no labeled calibration set and no anchored scale (JUDGE-001).",
+    ],
+    "promptfoo_clean": [
+        "beat 1 -- run: the same Promptfoo eval, innocuous env, deterministic assertions only.",
+        "beat 2 -- audit: zero findings; token usage and latency fully reported.",
+    ],
 }
 
 
@@ -150,7 +159,7 @@ def demo(
         Path("evalint-demo-report.html"), help="Where to write the demo HTML report."
     ),
     fixture: str = typer.Option(
-        "leaky", help="Demo fixture: leaky, hardened, judge_bad, judge_clean, cost_wasteful, cost_clean."
+        "leaky", help="Demo fixture: leaky, hardened, judge_bad, judge_clean, cost_wasteful, cost_clean, promptfoo_bad, promptfoo_clean."
     ),
     budget_per_task: float | None = typer.Option(
         None,

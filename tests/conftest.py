@@ -27,6 +27,8 @@ DEMO_JUDGE_BAD = _demo_path("judge_bad")
 DEMO_JUDGE_CLEAN = _demo_path("judge_clean")
 DEMO_COST_WASTEFUL = _demo_path("cost_wasteful")
 DEMO_COST_CLEAN = _demo_path("cost_clean")
+DEMO_PROMPTFOO_BAD = _demo_path("promptfoo_bad")
+DEMO_PROMPTFOO_CLEAN = _demo_path("promptfoo_clean")
 
 
 def make_model(

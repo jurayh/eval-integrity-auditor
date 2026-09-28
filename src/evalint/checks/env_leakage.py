@@ -81,7 +81,7 @@ class EnvLeakageCheck(Check):
                             "Known eval-detection signal: an agent can branch on this value "
                             "(e.g. look up a gold patch by task ID).",
                         ],
-                        locations=[SourceLocation(file="environment.json", excerpt=f"env.{name}")],
+                        locations=[SourceLocation(file=model.artifact_file("environment.json"), excerpt=f"env.{name}")],
                         remediation=self.meta.remediation,
                     )
                 )
@@ -101,7 +101,7 @@ class EnvLeakageCheck(Check):
                             "or answer-bearing state. Confirm whether the agent needs this; "
                             "rename or hide it if not.",
                         ],
-                        locations=[SourceLocation(file="environment.json", excerpt=f"env.{name}")],
+                        locations=[SourceLocation(file=model.artifact_file("environment.json"), excerpt=f"env.{name}")],
                         remediation=self.meta.remediation,
                     )
                 )
@@ -130,7 +130,7 @@ class EnvLeakageCheck(Check):
                             f"mount {mount.path!r} is readable by the agent (mode={mount.mode}).",
                             f"Path segment(s) {leaked} indicate answer-bearing material.",
                         ],
-                        locations=[SourceLocation(file="environment.json", excerpt=f"mounts[] -> {mount.path}")],
+                        locations=[SourceLocation(file=model.artifact_file("environment.json"), excerpt=f"mounts[] -> {mount.path}")],
                         remediation=self.meta.remediation,
                     )
                 )

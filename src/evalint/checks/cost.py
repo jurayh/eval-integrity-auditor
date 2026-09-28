@@ -102,8 +102,8 @@ def summarize_cost(
     )
 
 
-def _cost_location() -> SourceLocation:
-    return SourceLocation(file="run.json", excerpt="attempts[] tokens_in/tokens_out/tries")
+def _cost_location(model: IntegrityModel) -> SourceLocation:
+    return SourceLocation(file=model.artifact_file("run.json"), excerpt="attempts[] tokens_in/tokens_out/tries")
 
 
 class CostReportingCheck(Check):
@@ -165,7 +165,7 @@ class CostReportingCheck(Check):
                     f"{len(model.attempts)} attempt(s) recorded, none with tokens_in/tokens_out.",
                     "Cost per completed task cannot be computed from this run log.",
                 ],
-                locations=[_cost_location()],
+                locations=[_cost_location(model)],
                 remediation=self.meta.remediation,
             )
         ]
@@ -206,7 +206,7 @@ class RetryMultiplierCheck(Check):
                     f"(max {summary.max_tries} tries on one attempt).",
                     "The pass rate alone understates cost per completed task.",
                 ],
-                locations=[_cost_location()],
+                locations=[_cost_location(model)],
                 remediation=self.meta.remediation,
             )
         ]
@@ -246,7 +246,7 @@ class WastedSpendCheck(Check):
                     f"({summary.wasted_share:.0%}) went to attempts that never passed.",
                     "Cost per success is dominated by failure, not by useful work.",
                 ],
-                locations=[_cost_location()],
+                locations=[_cost_location(model)],
                 remediation=self.meta.remediation,
             )
         ]
@@ -294,7 +294,7 @@ class RunawayAttemptCheck(Check):
                     f"tokens vs a typical {typical:,} across {summary.attempts} priced attempts.",
                     "A single unbounded attempt can dominate total run cost.",
                 ],
-                locations=[_cost_location()],
+                locations=[_cost_location(model)],
                 remediation=self.meta.remediation,
             )
         ]

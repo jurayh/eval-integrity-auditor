@@ -1,0 +1,27 @@
+description: "support-ticket classifier eval (demo, clean)"
+env:
+  MODEL_NAME: "demo-classifier"
+prompts:
+  - "Classify this support ticket as billing or technical. Reply with only the label.\nTicket: {{ticket}}"
+providers:
+  - openai:gpt-4o-mini
+defaultTest:
+  assert:
+    - type: equals
+      value: "{{expected}}"
+tests:
+  - description: "billing ticket"
+    vars:
+      ticket: "I was charged twice for my subscription."
+      expected: "billing"
+  - description: "technical ticket"
+    vars:
+      ticket: "The app crashes whenever I try to sign in."
+      expected: "technical"
+  - description: "billing ticket, refund request"
+    vars:
+      ticket: "Please refund my last invoice."
+      expected: "billing"
+    assert:
+      - type: contains
+        value: "bill"

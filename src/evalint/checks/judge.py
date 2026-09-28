@@ -30,8 +30,8 @@ def _is_judge(model: IntegrityModel) -> bool:
     return model.grader.kind == "judge"
 
 
-def _judge_loc(excerpt: str) -> SourceLocation:
-    return SourceLocation(file="judge_run.json", excerpt=excerpt)
+def _judge_loc(model: IntegrityModel, excerpt: str) -> SourceLocation:
+    return SourceLocation(file=model.artifact_file("judge_run.json"), excerpt=excerpt)
 
 
 class UnvalidatedJudgeCheck(Check):
@@ -70,7 +70,7 @@ class UnvalidatedJudgeCheck(Check):
                         "with no reference labels attached.",
                         "Judge scores are unvalidated against human judgment.",
                     ],
-                    locations=[_judge_loc("reference_labels (absent)")],
+                    locations=[_judge_loc(model, "reference_labels (absent)")],
                     remediation=self.meta.remediation,
                 )
             )
@@ -86,7 +86,7 @@ class UnvalidatedJudgeCheck(Check):
                         "judge rubric defines criteria but no anchored scale levels.",
                         "Without anchors, score meanings drift between runs and reviewers.",
                     ],
-                    locations=[_judge_loc("judge.scale_anchors (absent)")],
+                    locations=[_judge_loc(model, "judge.scale_anchors (absent)")],
                     remediation=self.meta.remediation,
                 )
             )
@@ -103,7 +103,7 @@ class UnvalidatedJudgeCheck(Check):
                         f"temperature={temp}, repeats={grader.repeats}: sampling noise "
                         "can flip verdicts with no way to detect it.",
                     ],
-                    locations=[_judge_loc("judge.temperature / judge.repeats")],
+                    locations=[_judge_loc(model, "judge.temperature / judge.repeats")],
                     remediation=self.meta.remediation,
                 )
             )
@@ -147,7 +147,7 @@ class PairOrderCheck(Check):
                     "Presentation order is a known confound for LLM judges; "
                     "verdicts may reflect position rather than quality.",
                 ],
-                locations=[_judge_loc("judge.protocol=pairwise, judge.counterbalanced (absent/false)")],
+                locations=[_judge_loc(model, "judge.protocol=pairwise, judge.counterbalanced (absent/false)")],
                 remediation=self.meta.remediation,
             )
         ]
@@ -200,7 +200,7 @@ class SelfConsistencyCheck(Check):
                             f"{list(candidates)} produced winners {sorted(winners)}.",
                             "The same input yields different verdicts across repeats.",
                         ],
-                        locations=[_judge_loc(f"judgments[] task_id={task_id} (repeat_index 0..{len(group)-1})")],
+                        locations=[_judge_loc(model, f"judgments[] task_id={task_id} (repeat_index 0..{len(group)-1})")],
                         remediation=self.meta.remediation,
                     )
                 )
@@ -221,7 +221,7 @@ class SelfConsistencyCheck(Check):
                                 f"task {task_id!r}: scores spread {spread:.2f} across "
                                 f"{len(group)} repeats (scale max {scale_max:.2f}).",
                             ],
-                            locations=[_judge_loc(f"judgments[] task_id={task_id} (repeat_index 0..{len(group)-1})")],
+                            locations=[_judge_loc(model, f"judgments[] task_id={task_id} (repeat_index 0..{len(group)-1})")],
                             remediation=self.meta.remediation,
                         )
                     )
@@ -294,7 +294,7 @@ class ReferenceAgreementCheck(Check):
                     f"{AGREEMENT_FLOOR:.0%} over labeled items.",
                     *[f"mismatch: {m}" for m in mismatches],
                 ],
-                locations=[_judge_loc("reference_labels vs judgments[].winner/scores")],
+                locations=[_judge_loc(model, "reference_labels vs judgments[].winner/scores")],
                 remediation=self.meta.remediation,
             )
         ]
@@ -349,7 +349,7 @@ class PositionBiasCheck(Check):
                     "Heuristic signal: corroborate with counterbalanced re-runs "
                     "before treating it as proof.",
                 ],
-                locations=[_judge_loc("judgments[].presentation_order vs judgments[].winner")],
+                locations=[_judge_loc(model, "judgments[].presentation_order vs judgments[].winner")],
                 remediation=self.meta.remediation,
             )
         ]
@@ -403,7 +403,7 @@ class VerbosityBiasCheck(Check):
                     "Heuristic signal: corroborate against reference labels "
                     "before treating it as proof.",
                 ],
-                locations=[_judge_loc("judgments[].lengths vs judgments[].winner")],
+                locations=[_judge_loc(model, "judgments[].lengths vs judgments[].winner")],
                 remediation=self.meta.remediation,
             )
         ]

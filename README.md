@@ -57,6 +57,8 @@ directory. Run any of them with `evalint demo --fixture <name>`:
 | `judge_clean` | The validated judge: counterbalanced, temperature 0, anchored rubric, 92% agreement. 100/100 PASS. |
 | `cost_wasteful` | A wasteful run: 2.67 tries per success, 91% of spend on attempts that never passed, one 22,000-token runaway loop. |
 | `cost_clean` | The same tasks solved first try at modest cost. No cost findings. |
+| `promptfoo_bad` | A Promptfoo eval with `TASK_ID`/`RUN_ID` planted in env (ENV-001) and uncalibrated `llm-rubric` assertions (JUDGE-001). 35/100 BLOCKED. |
+| `promptfoo_clean` | The same Promptfoo eval done right: innocuous env, deterministic assertions, full token/latency reporting. 100/100 PASS. |
 
 ```bash
 evalint demo --fixture judge_bad
@@ -110,23 +112,26 @@ model. Checks only ever see that model, never harness internals. That
 boundary is what keeps this a linter instead of another eval framework.
 
 ```
-eval artifact/ ──▶ adapter (inspect) ──▶ integrity model ──▶ checks ──▶ report
-     read-only, offline              data · boundary · grader · runs
+eval artifact/ ──▶ adapter (inspect | promptfoo) ──▶ integrity model ──▶ checks ──▶ report
+     read-only, offline                          data · boundary · grader · runs
 ```
 
-v0.4 ships one adapter (`inspect`, for Inspect-style eval artifact
-directories). Promptfoo, Harbor, and BrowserGym adapters plug into the same
-registry. A new check is one module plus one registration line; a new
+v0.5 ships two adapters: `inspect` for Inspect-style eval artifact
+directories, and `promptfoo` for Promptfoo's `promptfooconfig.yaml` plus the
+JSON export from `promptfoo eval --output results.json`. Both are strictly
+read-only and offline; variable names are kept for analysis while secret
+values never enter the normalized model. Harbor and BrowserGym plug into the
+same registry. A new check is one module plus one registration line; a new
 reporter is one module plus one import.
 
 ## CLI
 
 ```
-evalint audit <eval-artifact> [--adapter auto|inspect] [--output report.html]
+evalint audit <eval-artifact> [--adapter auto|inspect|promptfoo] [--output report.html]
                               [--json findings.json] [--fail-on high]
                               [--price-in 3.0] [--price-out 15.0]
                               [--budget-per-task USD]
-evalint demo [--fixture leaky|hardened|judge_bad|judge_clean|cost_wasteful|cost_clean]
+evalint demo [--fixture leaky|hardened|judge_bad|judge_clean|cost_wasteful|cost_clean|promptfoo_bad|promptfoo_clean]
              [--output evalint-demo-report.html] [--budget-per-task USD]
 evalint report-card <eval-artifact> [--output card.html]
 evalint report-cards <eval...> [--fixtures a,b] [--output-dir cards/]

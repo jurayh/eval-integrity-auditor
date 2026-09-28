@@ -47,7 +47,7 @@ class VerifierWritableCheck(Check):
                     "An agent with write access to the oracle can alter pass/fail "
                     "outcomes directly.",
                 ],
-                locations=[SourceLocation(file="grader.json", excerpt="verifier.writable_by_agent")],
+                locations=[SourceLocation(file=model.artifact_file("grader.json"), excerpt="verifier.writable_by_agent")],
                 remediation=self.meta.remediation,
             )
         ]
@@ -84,7 +84,7 @@ class EmptyPathCheck(Check):
                         "grader.json sets accepts_empty_output=true.",
                         "Any submission -- including no submission at all -- can score as a pass.",
                     ],
-                    locations=[SourceLocation(file="grader.json", excerpt="accepts_empty_output")],
+                    locations=[SourceLocation(file=model.artifact_file("grader.json"), excerpt="accepts_empty_output")],
                     remediation=self.meta.remediation,
                 )
             )
@@ -105,7 +105,7 @@ class EmptyPathCheck(Check):
                             f"status={attempt.status!r}, score={attempt.score}.",
                             "Credit was granted without any completed work.",
                         ],
-                        locations=[SourceLocation(file="run.json", excerpt=f"attempts[] task_id={attempt.task_id}")],
+                        locations=[SourceLocation(file=model.artifact_file("run.json"), excerpt=f"attempts[] task_id={attempt.task_id}")],
                         remediation=self.meta.remediation,
                     )
                 )

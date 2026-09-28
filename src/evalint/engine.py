@@ -12,6 +12,7 @@ from pathlib import Path
 from . import adapters  # noqa: F401  (import registers the Inspect adapter)
 from .adapters import AuditError, autodetect
 from .adapters import inspect_ai  # noqa: F401  (registers itself on import)
+from .adapters import promptfoo  # noqa: F401  (registers itself on import)
 from .checks import REGISTRY
 from .model import SEVERITY_ORDER, Finding, IntegrityModel, Severity
 

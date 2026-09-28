@@ -189,3 +189,12 @@ class IntegrityModel:
     # Artifact file -> sha256, for the reproducibility manifest.
     digests: dict[str, str] = field(default_factory=dict)
     cost_summary: CostSummary | None = None
+    # Maps canonical artifact filenames (the ones checks cite in evidence) to
+    # the actual filenames the adapter read, e.g.
+    # {"environment.json": "promptfooconfig.yaml"}. Lets adapters keep check
+    # evidence pointers honest without the checks knowing harness layouts.
+    file_aliases: dict[str, str] = field(default_factory=dict)
+
+    def artifact_file(self, canonical: str) -> str:
+        """The real filename behind a canonical artifact name in evidence."""
+        return self.file_aliases.get(canonical, canonical)
