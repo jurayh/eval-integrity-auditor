@@ -1,8 +1,8 @@
 """GRAD-001 / GRAD-002 tests."""
 from __future__ import annotations
 
-from evalint.checks.grader import EmptyPathCheck, VerifierWritableCheck
-from evalint.model import Attempt, Confidence, Grader, Severity
+from evalwarden.checks.grader import EmptyPathCheck, VerifierWritableCheck
+from evalwarden.model import Attempt, Confidence, Grader, Severity
 
 from .conftest import make_model
 

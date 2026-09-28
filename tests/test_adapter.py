@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from evalint.adapters import AuditError, autodetect
-from evalint.adapters.inspect_ai import InspectAdapter
-from evalint.model import Confidence
+from evalwarden.adapters import AuditError, autodetect
+from evalwarden.adapters.inspect_ai import InspectAdapter
+from evalwarden.model import Confidence
 
 from .conftest import DEMO_HARDENED, DEMO_LEAKY
 
@@ -63,7 +63,7 @@ def test_collect_is_read_only(leaky_dir: Path):
 
 def test_unsupported_fields_reported_not_dropped(tmp_path: Path):
     (tmp_path / "dataset.json").write_text(
-        '{"schema_version": "evalint-artifact-v1", "eval_id": "x", "tasks": [], "future_field": 1}'
+        '{"schema_version": "evalwarden-artifact-v1", "eval_id": "x", "tasks": [], "future_field": 1}'
     )
     (tmp_path / "grader.json").write_text('{"kind": "script"}')
     model = adapter.normalize(adapter.collect(tmp_path))

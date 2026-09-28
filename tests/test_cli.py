@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from evalint.cli import app
+from evalwarden.cli import app
 
 from .conftest import DEMO_HARDENED, DEMO_LEAKY
 

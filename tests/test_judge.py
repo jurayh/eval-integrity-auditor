@@ -1,7 +1,7 @@
 """JUDGE-001 .. JUDGE-006 tests: positive, negative, and precision cases."""
 from __future__ import annotations
 
-from evalint.checks.judge import (
+from evalwarden.checks.judge import (
     PositionBiasCheck,
     ReferenceAgreementCheck,
     SelfConsistencyCheck,
@@ -9,7 +9,7 @@ from evalint.checks.judge import (
     VerbosityBiasCheck,
     PairOrderCheck,
 )
-from evalint.model import Confidence, Grader, Severity
+from evalwarden.model import Confidence, Grader, Severity
 
 from .conftest import make_judge_grader, make_judgment, make_model
 

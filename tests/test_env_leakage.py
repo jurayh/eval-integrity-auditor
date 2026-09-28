@@ -1,8 +1,8 @@
 """ENV-001 tests. Precision matters more than recall: clean evals must not be flagged."""
 from __future__ import annotations
 
-from evalint.checks.env_leakage import EnvLeakageCheck
-from evalint.model import Confidence, Mount, Severity
+from evalwarden.checks.env_leakage import EnvLeakageCheck
+from evalwarden.model import Confidence, Mount, Severity
 
 from .conftest import make_model
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": "evalint-artifact-v1",
+  "schema_version": "evalwarden-artifact-v1",
   "eval_id": "HealthBench via inspect_evals",
   "tasks": [
     {

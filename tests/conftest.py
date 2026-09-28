@@ -1,19 +1,19 @@
-"""Shared fixtures for the evalint test suite."""
+"""Shared fixtures for the evalwarden test suite."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-import evalint
-from evalint.model import Attempt, Environment, Grader, IntegrityModel, Judgment, TaskSample
+import evalwarden
+from evalwarden.model import Attempt, Environment, Grader, IntegrityModel, Judgment, TaskSample
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _demo_path(name: str) -> Path:
     """Demo fixtures ship inside the installed package; fall back to a checkout."""
-    packaged = Path(evalint.__file__).resolve().parent / "demo" / name
+    packaged = Path(evalwarden.__file__).resolve().parent / "demo" / name
     if packaged.is_dir():
         return packaged
     checkout = REPO_ROOT / "demo" / name

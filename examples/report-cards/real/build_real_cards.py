@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build evalint audit artifacts from real public benchmark definitions.
+"""Build evalwarden audit artifacts from real public benchmark definitions.
 
-This script translates PUBLIC, downloadable eval definitions into evalint's
+This script translates PUBLIC, downloadable eval definitions into evalwarden's
 artifact format (dataset.json / environment.json / grader.json) WITHOUT
 inventing anything:
 
@@ -28,7 +28,7 @@ Pinned sources (all public, no auth):
 Usage:
     python3 build_real_cards.py --work-dir /tmp/real_work
     # then:
-    evalint report-cards /tmp/real_work/swe-bench-verified /tmp/real_work/healthbench \
+    evalwarden report-cards /tmp/real_work/swe-bench-verified /tmp/real_work/healthbench \
         --output-dir examples/report-cards/real/
 
 Re-running the script reproduces the artifacts byte-for-byte as long as the
@@ -41,7 +41,7 @@ import json
 import urllib.request
 from pathlib import Path
 
-SCHEMA_VERSION = "evalint-artifact-v1"
+SCHEMA_VERSION = "evalwarden-artifact-v1"
 N_SAMPLES = 12
 
 INSPECT_EVALS_COMMIT = "244e43cc924d1de5a78dad7db259bbd4471c97e7"
@@ -58,7 +58,7 @@ SWE_IMAGE_TEMPLATE = "ghcr.io/epoch-research/swe-bench.eval.{arch}.{id}:latest"
 
 
 def _get_json(url: str) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": "evalint-card-builder/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "evalwarden-card-builder/1.0"})
     with urllib.request.urlopen(req, timeout=120) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
@@ -72,7 +72,7 @@ def _get_jsonl_head(url: str, want_lines: int, chunk_bytes: int = 2_000_000) -> 
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "evalint-card-builder/1.0",
+                "User-Agent": "evalwarden-card-builder/1.0",
                 "Range": f"bytes={offset}-{offset + chunk_bytes - 1}",
             },
         )
@@ -364,7 +364,7 @@ def main() -> None:
     work = Path(args.work_dir)
     build_swe_bench(work)
     build_healthbench(work)
-    print("done. Next: evalint audit <dir> to review, then evalint report-cards <dirs>.")
+    print("done. Next: evalwarden audit <dir> to review, then evalwarden report-cards <dirs>.")
 
 
 if __name__ == "__main__":

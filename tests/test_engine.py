@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from evalint.adapters import AuditError
-from evalint.engine import audit, integrity_score
-from evalint.model import Confidence, Finding, Severity
+from evalwarden.adapters import AuditError
+from evalwarden.engine import audit, integrity_score
+from evalwarden.model import Confidence, Finding, Severity
 
 from .conftest import DEMO_HARDENED, DEMO_LEAKY
 

@@ -1,4 +1,4 @@
-# evalint
+# evalwarden
 
 **A linter for agent evaluations, not another eval framework.**
 
@@ -11,13 +11,13 @@ environment, look up the gold answer, and report 100%. A grader can be
 writable by the agent it grades. A model judge can be uncalibrated, biased,
 and self-contradictory. The score looks fine. The score is meaningless.
 
-evalint audits the measurement system around a score: the dataset, the
+evalwarden audits the measurement system around a score: the dataset, the
 evidence boundary, the grader, the run records, and the cost. It never runs
 your evals and never changes your harness. It reads your eval artifacts and
 tells you whether the score can be trusted, with file-level evidence for
 every finding.
 
-![evalint HTML integrity report](docs/images/report-screenshot.png)
+![evalwarden HTML integrity report](docs/images/report-screenshot.png)
 
 ## Quickstart
 
@@ -25,11 +25,11 @@ Three steps, about a minute, no model key required:
 
 ```bash
 pip install .
-evalint demo
+evalwarden demo
 ```
 
 That audits a deliberately broken benchmark and writes
-`evalint-demo-report.html`. Open it in a browser.
+`evalwarden-demo-report.html`. Open it in a browser.
 
 ## The flagship demo: caught red-handed
 
@@ -47,8 +47,8 @@ opaque IDs, no gold mounted, read-only verifier, a genuine solver. Result:
 **100/100 PASS**. Same benchmark, same auditor, before and after.
 
 ```bash
-evalint demo --fixture leaky     # the cheat: 0/100 BLOCKED
-evalint demo --fixture hardened  # the fix: 100/100 PASS
+evalwarden demo --fixture leaky     # the cheat: 0/100 BLOCKED
+evalwarden demo --fixture hardened  # the fix: 100/100 PASS
 ```
 
 ## A tour: finding, explain, fix
@@ -57,7 +57,7 @@ Every finding carries its evidence, and every check explains itself. Here
 is the full loop on the flagship cheat. First the finding:
 
 ```bash
-$ evalint demo --fixture leaky
+$ evalwarden demo --fixture leaky
 ...
 E ENV-001 [error|confidence:high] Eval-detection variable visible to agent: TASK_ID
     evidence: environment variable 'TASK_ID' is visible to the agent/solver.
@@ -69,7 +69,7 @@ E ENV-001 [error|confidence:high] Eval-detection variable visible to agent: TASK
 Then what it means and how to fix it:
 
 ```bash
-$ evalint explain ENV-001
+$ evalwarden explain ENV-001
 ENV-001: Eval-detection signal or leaked state visible to the agent
 
 threat: If the agent can observe run IDs, task IDs, or agent tokens -- or read
@@ -86,16 +86,16 @@ Apply the fix, which is exactly what the `hardened` fixture does, and the
 same audit goes green:
 
 ```bash
-$ evalint demo --fixture hardened
+$ evalwarden demo --fixture hardened
 ...
-evalint audit: tinycode-hardened-1.0
+evalwarden audit: tinycode-hardened-1.0
 Integrity: 100 / 100 PASS (0 errors, 0 high, 0 medium, 0 low)
 ```
 
 ## Demo fixtures
 
 Every fixture ships inside the package, so the demo works from any
-directory. Run any of them with `evalint demo --fixture <name>`:
+directory. Run any of them with `evalwarden demo --fixture <name>`:
 
 | Fixture | What it shows |
 |---------|---------------|
@@ -109,8 +109,8 @@ directory. Run any of them with `evalint demo --fixture <name>`:
 | `promptfoo_clean` | The same Promptfoo eval done right: innocuous env, deterministic assertions, full token/latency reporting. 100/100 PASS. |
 
 ```bash
-evalint demo --fixture judge_bad
-evalint demo --fixture cost_wasteful --budget-per-task 0.05
+evalwarden demo --fixture judge_bad
+evalwarden demo --fixture cost_wasteful --budget-per-task 0.05
 ```
 
 ## Checks
@@ -135,7 +135,7 @@ on a clean eval is worse than no auditor, so every finding carries a
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 
-`evalint explain COST-004` prints any check's threat model, evidence, and fix.
+`evalwarden explain COST-004` prints any check's threat model, evidence, and fix.
 
 ## Report cards
 
@@ -144,8 +144,8 @@ per benchmark with the verdict, per-category scores, key findings, and a
 methodology footer. Generate one per eval, or a whole set plus an index:
 
 ```bash
-evalint report-card path/to/eval --output card.html
-evalint report-cards eval-a/ eval-b/ --output-dir cards/
+evalwarden report-card path/to/eval --output card.html
+evalwarden report-cards eval-a/ eval-b/ --output-dir cards/
 ```
 
 Example cards generated from the demo fixtures live in
@@ -195,15 +195,15 @@ reporter is one module plus one import.
 ## CLI
 
 ```
-evalint audit <eval-artifact> [--adapter auto|inspect|promptfoo] [--output report.html]
+evalwarden audit <eval-artifact> [--adapter auto|inspect|promptfoo] [--output report.html]
                               [--json findings.json] [--fail-on high]
                               [--price-in 3.0] [--price-out 15.0]
                               [--budget-per-task USD]
-evalint demo [--fixture leaky|hardened|judge_bad|judge_clean|cost_wasteful|cost_clean|promptfoo_bad|promptfoo_clean]
-             [--output evalint-demo-report.html] [--budget-per-task USD]
-evalint report-card <eval-artifact> [--output card.html]
-evalint report-cards <eval...> [--fixtures a,b] [--output-dir cards/]
-evalint explain <CHECK-ID>
+evalwarden demo [--fixture leaky|hardened|judge_bad|judge_clean|cost_wasteful|cost_clean|promptfoo_bad|promptfoo_clean]
+             [--output evalwarden-demo-report.html] [--budget-per-task USD]
+evalwarden report-card <eval-artifact> [--output card.html]
+evalwarden report-cards <eval...> [--fixtures a,b] [--output-dir cards/]
+evalwarden explain <CHECK-ID>
 ```
 
 Exit codes: `0` policy passes, `1` findings cross `--fail-on`, `2` the audit

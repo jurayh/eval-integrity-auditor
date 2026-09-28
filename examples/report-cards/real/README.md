@@ -46,7 +46,7 @@ exactly what was translated, what was excluded and why. Rebuild with:
 
 ```bash
 python3 build_real_cards.py --work-dir /tmp/real_work
-evalint report-cards /tmp/real_work/swe-bench-verified /tmp/real_work/healthbench \
+evalwarden report-cards /tmp/real_work/swe-bench-verified /tmp/real_work/healthbench \
     --output-dir /tmp/real_cards/
 ```
 

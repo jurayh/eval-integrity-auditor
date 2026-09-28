@@ -1,8 +1,8 @@
 """COST-001 tests."""
 from __future__ import annotations
 
-from evalint.checks.cost import CostReportingCheck, summarize_cost
-from evalint.model import Attempt, Confidence, Severity
+from evalwarden.checks.cost import CostReportingCheck, summarize_cost
+from evalwarden.model import Attempt, Confidence, Severity
 
 from .conftest import make_model
 
@@ -62,7 +62,7 @@ def test_no_attempts_no_finding():
 # ---------------------------------------------------------------------------
 # COST-002 / COST-003 / COST-004: efficiency checks
 # ---------------------------------------------------------------------------
-from evalint.checks.cost import (  # noqa: E402
+from evalwarden.checks.cost import (  # noqa: E402
     RetryMultiplierCheck,
     RunawayAttemptCheck,
     WastedSpendCheck,
@@ -83,7 +83,7 @@ def _eff_attempt(task_id, status="pass", tokens_in=2000, tokens_out=800, tries=1
 
 def _run_with_summary(attempts, **kwargs):
     """Attach a cost summary to a model, like COST-001 does."""
-    from evalint.checks.cost import summarize_cost
+    from evalwarden.checks.cost import summarize_cost
 
     model = make_model(attempts=attempts)
     model.cost_summary = summarize_cost(attempts, **kwargs)
@@ -187,7 +187,7 @@ def test_cost_004_needs_minimum_attempts():
 
 
 def test_with_options_configures_cost_check():
-    from evalint.checks.env_leakage import EnvLeakageCheck
+    from evalwarden.checks.env_leakage import EnvLeakageCheck
 
     plain = EnvLeakageCheck()
     assert plain.with_options(price_in_per_1m=1.0) is plain  # base default: self
@@ -203,7 +203,7 @@ def test_with_options_configures_cost_check():
 def test_audit_budget_option_flows_through(tmp_path):
     from typer.testing import CliRunner
 
-    from evalint.cli import app
+    from evalwarden.cli import app
 
     from .conftest import DEMO_COST_CLEAN
 

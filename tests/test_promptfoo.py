@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from evalint.adapters import AuditError, Confidence, autodetect
-from evalint.adapters.promptfoo import ADAPTER_NAME, ADAPTER_VERSION, PromptfooAdapter
-from evalint.cli import app
-from evalint.engine import audit_with_policy
+from evalwarden.adapters import AuditError, Confidence, autodetect
+from evalwarden.adapters.promptfoo import ADAPTER_NAME, ADAPTER_VERSION, PromptfooAdapter
+from evalwarden.cli import app
+from evalwarden.engine import audit_with_policy
 
 from .conftest import DEMO_PROMPTFOO_BAD, DEMO_PROMPTFOO_CLEAN
 
@@ -209,7 +209,7 @@ def test_cli_audit_bad_fixture_exits_1(tmp_path: Path):
     assert "BLOCKED" in result.output
     assert "ENV-001" in result.output
     assert "JUDGE-001" in result.output
-    assert "promptfoo 0.5.0" in result.output
+    assert "promptfoo 0.6.0" in result.output
     assert report.is_file()
 
 

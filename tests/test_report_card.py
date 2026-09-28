@@ -5,10 +5,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from evalint.cli import app
-from evalint.engine import AuditResult, integrity_score
-from evalint.model import Confidence, Finding, Severity, SourceLocation
-from evalint.reporters.report_card import (
+from evalwarden.cli import app
+from evalwarden.engine import AuditResult, integrity_score
+from evalwarden.model import Confidence, Finding, Severity, SourceLocation
+from evalwarden.reporters.report_card import (
     category_of,
     category_scores,
     render_index,
@@ -106,7 +106,7 @@ def test_report_card_shows_no_secret_values():
 
 
 def test_index_lists_cards():
-    from evalint.reporters.report_card import CardEntry
+    from evalwarden.reporters.report_card import CardEntry
 
     cards = [
         CardEntry("eval-a", "BLOCKED", 0, "eval-a.html", "2026-09-28 00:00 UTC"),

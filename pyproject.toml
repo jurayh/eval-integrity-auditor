@@ -3,13 +3,13 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "evalint"
-version = "0.5.0"
+name = "evalwarden"
+version = "0.6.0"
 description = "A linter for agent evaluations: audit the measurement system around a score."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Yuriy" }]
+authors = [{ name = "Yuriy H" }]
 keywords = ["agents", "evaluation", "benchmarks", "linting", "llm"]
 dependencies = [
   "typer>=0.9",
@@ -21,13 +21,13 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.scripts]
-evalint = "evalint.cli:app"
+evalwarden = "evalwarden.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-evalint = ["demo/**/*"]
+evalwarden = ["demo/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
