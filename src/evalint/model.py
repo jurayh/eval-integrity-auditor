@@ -94,11 +94,42 @@ class TaskSample:
 
 @dataclass
 class Grader:
-    kind: str = "script"
+    kind: str = "script"  # "script" | "judge" (model-as-judge)
     verifier_path: str | None = None
     verifier_writable_by_agent: bool = False
     accepts_empty_output: bool = False
     tests: list[str] = field(default_factory=list)
+    # Model-judge configuration. Populated only when kind == "judge".
+    judge_model: str | None = None
+    judge_family: str | None = None  # model family, for self-preference analysis
+    protocol: str | None = None  # "pairwise" | "pointwise" | "listwise"
+    counterbalanced: bool | None = None  # pairwise: was presentation order randomized?
+    temperature: float | None = None
+    repeats: int = 1  # judgments collected per item
+    rubric_criteria: list[str] = field(default_factory=list)
+    scale_anchors: dict[str, str] = field(default_factory=dict)  # anchor -> description
+    # Reference (human) labels the judge is validated against: task_id -> label.
+    # For pairwise judgments the label is the winning candidate id; for
+    # pointwise it is the expected score or pass/fail as a string.
+    reference_labels: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class Judgment:
+    """One recorded model-judge verdict, structured.
+
+    Raw judgment text (rationales, chain-of-thought) is NEVER stored here:
+    adapters redact it at the boundary. Only the structured verdict survives,
+    which is all the integrity checks need.
+    """
+
+    task_id: str
+    candidates: list[str] = field(default_factory=list)  # canonical (sorted) ids
+    presentation_order: list[str] = field(default_factory=list)  # as shown to the judge
+    winner: str | None = None  # pairwise: winning candidate id
+    scores: dict[str, float] = field(default_factory=dict)  # candidate -> score
+    lengths: dict[str, int] = field(default_factory=dict)  # candidate -> chars
+    repeat_index: int = 0
 
 
 @dataclass
@@ -137,6 +168,7 @@ class IntegrityModel:
     environment: Environment = field(default_factory=Environment)
     grader: Grader = field(default_factory=Grader)
     attempts: list[Attempt] = field(default_factory=list)
+    judgments: list[Judgment] = field(default_factory=list)
     # Harness fields the adapter saw but could not translate. Shown in the
     # report as coverage gaps, never silently dropped.
     unsupported: list[str] = field(default_factory=list)

@@ -1,0 +1,21 @@
+{
+  "kind": "judge",
+  "judge": {
+    "model": "judge-7b",
+    "family": "test-family",
+    "protocol": "pairwise",
+    "counterbalanced": true,
+    "temperature": 0.0,
+    "repeats": 3,
+    "rubric_criteria": [
+      "helpfulness",
+      "correctness"
+    ],
+    "scale_anchors": {
+      "1": "unhelpful or wrong",
+      "3": "partially helpful",
+      "5": "fully helpful and correct"
+    }
+  },
+  "notes": "Validated judge: calibration set attached, anchored rubric, pinned temperature."
+}

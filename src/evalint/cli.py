@@ -87,16 +87,41 @@ def audit(
     raise typer.Exit(1 if policy_failed else 0)
 
 
-def _demo_dir() -> Path:
+def _demo_dir(fixture: str = "leaky") -> Path:
     here = Path(evalint.__file__).resolve().parent  # <repo>/src/evalint
     candidates = [
-        here.parent.parent / "demo" / "leaky",  # editable install: repo root
-        Path.cwd() / "demo" / "leaky",
+        here.parent.parent / "demo" / fixture,  # editable install: repo root
+        Path.cwd() / "demo" / fixture,
     ]
     for candidate in candidates:
         if candidate.is_dir():
             return candidate
-    raise AuditError("demo fixture not found (expected demo/leaky/ next to the repo root)")
+    raise AuditError(f"demo fixture not found (expected demo/{fixture}/ next to the repo root)")
+
+
+_DEMO_BEATS = {
+    "leaky": [
+        "beat 1 -- run: the cheating solver reports 3/3 PASS (see demo/leaky/run.json).",
+        "beat 2 -- audit: the linter shows why that score is invalid.",
+        "",
+        "beat 3 -- harden: see demo/hardened/ for the fixed eval (opaque IDs, no gold access).",
+    ],
+    "hardened": [
+        "beat 1 -- run: the genuine solver passes 3/3 (see demo/hardened/run.json).",
+        "beat 2 -- audit: no blocking findings; the score stands.",
+    ],
+    "judge_bad": [
+        "beat 1 -- run: a model judge scores 25 pairwise comparisons (see demo/judge_bad/judge_run.json).",
+        "beat 2 -- audit: the linter finds an unvalidated judge, an AB-only protocol,",
+        "         self-contradicting repeats, 48% reference agreement, and position/verbosity bias.",
+        "",
+        "beat 3 -- harden: see demo/judge_clean/ for the validated judge (all findings clear).",
+    ],
+    "judge_clean": [
+        "beat 1 -- run: a validated model judge scores 25 pairwise comparisons.",
+        "beat 2 -- audit: counterbalanced, calibrated, consistent -- no findings; the score stands.",
+    ],
+}
 
 
 @app.command()
@@ -104,21 +129,29 @@ def demo(
     output: Path = typer.Option(
         Path("evalint-demo-report.html"), help="Where to write the demo HTML report."
     ),
+    fixture: str = typer.Option(
+        "leaky", help="Demo fixture: leaky, hardened, judge_bad, judge_clean."
+    ),
 ) -> None:
-    """Run the flagship demo: audit the deliberately leaky eval fixture."""
+    """Run a demo: audit a deliberately broken (or fixed) eval fixture."""
+    if fixture not in _DEMO_BEATS:
+        typer.echo(
+            f"error: unknown fixture {fixture!r} (known: {', '.join(sorted(_DEMO_BEATS))})",
+            err=True,
+        )
+        raise typer.Exit(2)
     try:
-        fixture = _demo_dir()
-        result, policy_failed = audit_with_policy(fixture)
+        fixture_dir = _demo_dir(fixture)
+        result, policy_failed = audit_with_policy(fixture_dir)
     except AuditError as exc:
         typer.echo(f"error: demo could not run: {exc}", err=True)
         raise typer.Exit(2)
-    typer.echo("beat 1 -- run: the cheating solver reports 3/3 PASS (see demo/leaky/run.json).")
-    typer.echo("beat 2 -- audit: the linter shows why that score is invalid.")
+    for beat in _DEMO_BEATS[fixture]:
+        typer.echo(beat)
     typer.echo("")
     typer.echo(render_terminal(result))
     output.write_text(render_html(result, evalint.__version__), encoding="utf-8")
     typer.echo(f"Report: {output}")
-    typer.echo("beat 3 -- harden: see demo/hardened/ for the fixed eval (opaque IDs, no gold access).")
     raise typer.Exit(1 if policy_failed else 0)
 
 

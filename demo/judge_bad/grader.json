@@ -1,0 +1,16 @@
+{
+  "kind": "judge",
+  "judge": {
+    "model": "judge-7b",
+    "family": "test-family",
+    "protocol": "pairwise",
+    "counterbalanced": false,
+    "temperature": 0.7,
+    "repeats": 1,
+    "rubric_criteria": [
+      "helpfulness",
+      "correctness"
+    ]
+  },
+  "notes": "Model judge with no calibration set and an unanchored rubric."
+}

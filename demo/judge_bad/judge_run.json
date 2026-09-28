@@ -1,0 +1,449 @@
+{
+  "judge": {
+    "model": "judge-7b",
+    "family": "test-family"
+  },
+  "judgments": [
+    {
+      "task_id": "t01",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 500,
+        "sol-b": 300
+      },
+      "repeat_index": 0,
+      "rationale": "Response A is clearly better argued and more complete."
+    },
+    {
+      "task_id": "t01",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 500,
+        "sol-b": 300
+      },
+      "repeat_index": 1
+    },
+    {
+      "task_id": "t01",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 500,
+        "sol-b": 300
+      },
+      "repeat_index": 2
+    },
+    {
+      "task_id": "t02",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t02",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t03",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 550,
+        "sol-b": 350
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t03",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 550,
+        "sol-b": 350
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t04",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 500,
+        "sol-b": 300
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t04",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 500,
+        "sol-b": 300
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t05",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 300,
+        "sol-b": 600
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t05",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 300,
+        "sol-b": 600
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t06",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 700,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t06",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 700,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t07",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 350,
+        "sol-b": 650
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t07",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 350,
+        "sol-b": 650
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t08",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 400,
+        "sol-b": 600
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t08",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 400,
+        "sol-b": 600
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t09",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t09",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 400
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t10",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 650,
+        "sol-b": 350
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t10",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 650,
+        "sol-b": 350
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t11",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 450
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t11",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-b",
+        "sol-a"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 600,
+        "sol-b": 450
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t12",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-a",
+      "lengths": {
+        "sol-a": 400,
+        "sol-b": 500
+      },
+      "repeat_index": 0
+    },
+    {
+      "task_id": "t12",
+      "candidates": [
+        "sol-a",
+        "sol-b"
+      ],
+      "presentation_order": [
+        "sol-a",
+        "sol-b"
+      ],
+      "winner": "sol-b",
+      "lengths": {
+        "sol-a": 400,
+        "sol-b": 500
+      },
+      "repeat_index": 0
+    }
+  ],
+  "reference_labels": {
+    "t01": "sol-b",
+    "t02": "sol-a",
+    "t03": "sol-b",
+    "t04": "sol-a",
+    "t05": "sol-b",
+    "t06": "sol-a",
+    "t07": "sol-b",
+    "t08": "sol-a",
+    "t09": "sol-b",
+    "t10": "sol-b",
+    "t11": "sol-b",
+    "t12": "sol-a"
+  },
+  "notes": "Deliberately broken judge run: no anchors, temp 0.7, AB-only, self-contradicting, miscalibrated, position- and verbosity-biased."
+}

@@ -1,0 +1,5 @@
+{
+  "env": {},
+  "mounts": [],
+  "notes": "Judge fixtures need no agent environment."
+}

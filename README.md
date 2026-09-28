@@ -39,11 +39,28 @@ Then see `demo/hardened/`: opaque task IDs, no gold mounted, read-only
 verifier. The cheat fails there while a genuine solver passes — and the audit
 is clean. All fixtures are synthetic; no model key required.
 
-## Checks (v0.1)
+## The judge demo
+
+A second demo pair covers model judges. `demo/judge_bad/` is a deliberately
+miscalibrated pairwise judge: unvalidated against any labels (`JUDGE-001`),
+AB-only protocol (`JUDGE-002`), self-contradicting repeats (`JUDGE-003`), 48%
+reference agreement (`JUDGE-004`), and measurable position and verbosity bias
+(`JUDGE-005`, `JUDGE-006`). `demo/judge_clean/` is the validated counterpart —
+counterbalanced, temperature 0, anchored rubric, 92% agreement — and audits
+100/100 PASS.
+
+```bash
+evalint demo --fixture judge_bad    # the broken judge
+evalint demo --fixture judge_clean  # the validated judge
+```
+
+## Checks (v0.2)
 
 Deterministic, high-precision checks only. A linter that cries contamination
 on a clean eval is worse than no auditor — so every finding carries a
-**confidence** label, and statistical probes stay out until v0.2.
+**confidence** label. Bias heuristics (`JUDGE-005`, `JUDGE-006`) are
+deterministic computations with minimum-sample guards and Medium
+severity/confidence; they indicate risk, not proof.
 
 | ID | Check | Default severity |
 |----|-------|------------------|
@@ -51,6 +68,12 @@ on a clean eval is worse than no auditor — so every finding carries a
 | GRAD-001 | Verifier writable by the agent | Error |
 | GRAD-002 | Grader grants credit without completion | Error |
 | COST-001 | Cost per success not reported | Medium |
+| JUDGE-001 | Model judge lacks validation (no labels, unanchored rubric, hot single-sample) | High |
+| JUDGE-002 | Pairwise order not counterbalanced | High |
+| JUDGE-003 | Judge contradicts itself on repeated judgments | High |
+| JUDGE-004 | Judge disagrees with reference labels | High |
+| JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
+| JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 
 `evalint explain ENV-001` prints any check's threat model, evidence, and fix.
 
@@ -74,6 +97,7 @@ registry — see `src/evalint/adapters/__init__.py`.
 evalint audit <eval-artifact> [--adapter auto|inspect] [--output report.html]
                               [--json findings.json] [--fail-on high]
 evalint demo                  # run the flagship demo
+                              # --fixture leaky|hardened|judge_bad|judge_clean
 evalint explain <CHECK-ID>     # threat, evidence, remediation
 ```
 

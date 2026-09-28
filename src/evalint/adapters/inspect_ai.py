@@ -8,6 +8,7 @@ format, modeled on Inspect's Task / dataset / scorer / .eval-log concepts:
       environment.json   env vars visible to the solver, mounts
       grader.json        verifier config, pass conditions, tests
       run.json           per-task attempts with status, usage, actions
+      judge_run.json     (optional) model-judge config, judgments, reference labels
 
 This is a read-only translation layer. Full-fidelity parsing of real Inspect
 `.eval` logs is a later milestone; the adapter pins the schema version it
@@ -26,6 +27,7 @@ from ..model import (
     Environment,
     Grader,
     IntegrityModel,
+    Judgment,
     Mount,
     TaskSample,
 )
@@ -69,7 +71,13 @@ class InspectAdapter:
         """Read-only: files are opened for reading and never modified."""
         bundle: dict[str, Any] = {"root": path}
         digests: dict[str, str] = {}
-        for fname in ("dataset.json", "environment.json", "grader.json", "run.json"):
+        for fname in (
+            "dataset.json",
+            "environment.json",
+            "grader.json",
+            "run.json",
+            "judge_run.json",
+        ):
             fpath = path / fname
             if fpath.is_file():
                 bundle[fname] = _read_json(fpath)
@@ -119,12 +127,21 @@ class InspectAdapter:
         ]
 
         verifier = grader_cfg.get("verifier") or {}
+        judge = grader_cfg.get("judge") or {}
         grader = Grader(
             kind=str(grader_cfg.get("kind", "script")),
             verifier_path=verifier.get("path"),
             verifier_writable_by_agent=bool(verifier.get("writable_by_agent", False)),
             accepts_empty_output=bool(grader_cfg.get("accepts_empty_output", False)),
             tests=[str(t) for t in (grader_cfg.get("tests") or [])],
+            judge_model=judge.get("model"),
+            judge_family=judge.get("family"),
+            protocol=judge.get("protocol"),
+            counterbalanced=judge.get("counterbalanced"),
+            temperature=judge.get("temperature"),
+            repeats=int(judge.get("repeats", 1)),
+            rubric_criteria=[str(c) for c in (judge.get("rubric_criteria") or [])],
+            scale_anchors={str(k): str(v) for k, v in (judge.get("scale_anchors") or {}).items()},
         )
 
         attempts = [
@@ -144,6 +161,29 @@ class InspectAdapter:
         ]
 
         unsupported: list[str] = []
+
+        judge_run = bundle.get("judge_run.json", {})
+        judgments: list[Judgment] = []
+        for j in judge_run.get("judgments", []):
+            candidates = sorted(str(c) for c in (j.get("candidates") or []))
+            judgments.append(
+                Judgment(
+                    task_id=str(j.get("task_id", "")),
+                    candidates=candidates,
+                    presentation_order=[str(c) for c in (j.get("presentation_order") or candidates)],
+                    winner=j.get("winner"),
+                    scores={str(k): float(v) for k, v in (j.get("scores") or {}).items()},
+                    lengths={str(k): int(v) for k, v in (j.get("lengths") or {}).items()},
+                    repeat_index=int(j.get("repeat_index", 0)),
+                )
+            )
+        if any("rationale" in j for j in judge_run.get("judgments", [])):
+            # Raw judge text is redacted at the boundary by design, not parsed.
+            # Reported here so the redaction is explicit, not silent.
+            unsupported.append("judge_run.json:judgments[].rationale (redacted: raw judge text not stored)")
+        grader.reference_labels = {
+            str(k): str(v) for k, v in (judge_run.get("reference_labels") or {}).items()
+        }
         for fname, content in bundle.items():
             if fname in ("root", "digests", "extra_files"):
                 continue
@@ -151,8 +191,9 @@ class InspectAdapter:
                 known = {
                     "dataset.json": {"schema_version", "eval_id", "tasks"},
                     "environment.json": {"env", "mounts", "notes"},
-                    "grader.json": {"kind", "verifier", "accepts_empty_output", "tests"},
+                    "grader.json": {"kind", "verifier", "accepts_empty_output", "tests", "judge"},
                     "run.json": {"solver", "attempts", "notes"},
+                    "judge_run.json": {"judge", "judgments", "reference_labels", "notes"},
                 }.get(fname, set())
                 for key in content:
                     if key not in known:
@@ -166,6 +207,7 @@ class InspectAdapter:
             environment=Environment(env_vars=env_vars, mounts=mounts),
             grader=grader,
             attempts=attempts,
+            judgments=judgments,
             unsupported=unsupported,
             digests=dict(bundle.get("digests", {})),
         )

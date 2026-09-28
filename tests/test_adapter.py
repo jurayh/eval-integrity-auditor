@@ -68,3 +68,28 @@ def test_unsupported_fields_reported_not_dropped(tmp_path: Path):
     (tmp_path / "grader.json").write_text('{"kind": "script"}')
     model = adapter.normalize(adapter.collect(tmp_path))
     assert "dataset.json:future_field" in model.unsupported
+
+
+def test_normalize_judge_run_fixture():
+    from .conftest import DEMO_JUDGE_BAD
+
+    bundle = adapter.collect(DEMO_JUDGE_BAD)
+    model = adapter.normalize(bundle)
+    assert model.grader.kind == "judge"
+    assert model.grader.protocol == "pairwise"
+    assert model.grader.counterbalanced is False
+    assert model.grader.temperature == 0.7
+    assert len(model.judgments) == 25
+    assert len(model.grader.reference_labels) == 12
+    assert "judge_run.json" in model.digests
+
+
+def test_judge_rationale_redacted_not_stored():
+    from .conftest import DEMO_JUDGE_BAD
+
+    bundle = adapter.collect(DEMO_JUDGE_BAD)
+    assert "rationale" in bundle["judge_run.json"]["judgments"][0]
+    model = adapter.normalize(bundle)
+    # The Judgment dataclass has no field for raw text: it cannot leak through.
+    assert not any(hasattr(j, "rationale") for j in model.judgments)
+    assert any("rationale" in u and "redacted" in u for u in model.unsupported)

@@ -1,0 +1,150 @@
+{
+  "solver": "judge-runner",
+  "attempts": [
+    {
+      "task_id": "t01",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t02",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t03",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t04",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t05",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t06",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t07",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t08",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t09",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t10",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t11",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    },
+    {
+      "task_id": "t12",
+      "status": "pass",
+      "score": 1.0,
+      "tool_calls": 0,
+      "actions": [
+        "judge pair"
+      ],
+      "empty_submission": false,
+      "tokens_in": 800,
+      "tokens_out": 120
+    }
+  ],
+  "notes": "Attempts are bookkeeping; the signal under audit is judge_run.json."
+}

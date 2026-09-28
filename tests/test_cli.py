@@ -71,3 +71,51 @@ def test_fail_on_error_still_blocks_leaky(tmp_path: Path):
         app, ["audit", str(DEMO_LEAKY), "--output", str(report), "--fail-on", "error"]
     )
     assert result.exit_code == 1
+
+
+def test_audit_judge_bad_exits_1_with_all_judge_checks(tmp_path: Path):
+    from .conftest import DEMO_JUDGE_BAD
+
+    report = tmp_path / "report.html"
+    result = runner.invoke(app, ["audit", str(DEMO_JUDGE_BAD), "--output", str(report)])
+    assert result.exit_code == 1, result.output
+    assert "BLOCKED" in result.output
+    for check_id in ("JUDGE-001", "JUDGE-002", "JUDGE-003", "JUDGE-004", "JUDGE-005", "JUDGE-006"):
+        assert check_id in result.output, check_id
+    html = report.read_text()
+    assert "JUDGE-004" in html
+
+
+def test_audit_judge_clean_exits_0(tmp_path: Path):
+    from .conftest import DEMO_JUDGE_CLEAN
+
+    report = tmp_path / "report.html"
+    result = runner.invoke(app, ["audit", str(DEMO_JUDGE_CLEAN), "--output", str(report)])
+    assert result.exit_code == 0, result.output
+    assert "PASS" in result.output
+
+
+def test_demo_judge_bad_fixture(tmp_path: Path):
+    report = tmp_path / "demo.html"
+    result = runner.invoke(app, ["demo", "--fixture", "judge_bad", "--output", str(report)])
+    assert result.exit_code == 1, result.output
+    assert "JUDGE-004" in result.output
+    assert report.is_file()
+
+
+def test_demo_judge_clean_fixture(tmp_path: Path):
+    report = tmp_path / "demo.html"
+    result = runner.invoke(app, ["demo", "--fixture", "judge_clean", "--output", str(report)])
+    assert result.exit_code == 0, result.output
+    assert "PASS" in result.output
+
+
+def test_demo_unknown_fixture_exits_2():
+    result = runner.invoke(app, ["demo", "--fixture", "nope"])
+    assert result.exit_code == 2
+
+
+def test_explain_judge_check():
+    result = runner.invoke(app, ["explain", "JUDGE-001"])
+    assert result.exit_code == 0
+    assert "calibration" in result.output
