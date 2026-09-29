@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evalwarden — a linter for evals</title>
+<meta name="description" content="evalwarden audits the measurement system around a benchmark score: the dataset, the evidence boundary, the grader, the run records, and the cost.">
+<style>
+  :root {
+    --bg: #0f1216;
+    --surface: #171c23;
+    --surface-2: #1e242e;
+    --border: #2a323e;
+    --text: #e8ecf1;
+    --muted: #9aa4b2;
+    --faint: #6b7482;
+    --accent: #f0a92e;
+    --accent-dim: rgba(240, 169, 46, 0.12);
+    --green: #4cc38a;
+    --red: #e5534b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 72px 0; border-top: 1px solid var(--border); }
+  section:first-of-type { border-top: none; }
+
+  .eyebrow {
+    font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 20px;
+  }
+  h1 { font-size: 52px; line-height: 1.12; letter-spacing: -1.5px; font-weight: 700; }
+  h1 .dim { color: var(--muted); font-weight: 400; }
+  h2 { font-size: 28px; letter-spacing: -0.5px; margin-bottom: 12px; }
+  .lede { font-size: 19px; color: var(--muted); max-width: 640px; margin-top: 20px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+
+  .hero { padding: 110px 0 80px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; top: -220px; left: 50%; transform: translateX(-50%);
+    width: 700px; height: 440px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(240,169,46,0.14), transparent 70%);
+    pointer-events: none;
+  }
+  .install {
+    display: flex; align-items: center; gap: 12px; margin-top: 36px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; max-width: 460px;
+  }
+  .install code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; color: var(--text); }
+  .install .prompt { color: var(--accent); font-family: ui-monospace, Menlo, monospace; }
+  .ctas { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 11px 22px; border-radius: 8px;
+    font-weight: 600; font-size: 15px; text-decoration: none;
+    border: 1px solid var(--border); color: var(--text); background: var(--surface);
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #14100a; }
+  .btn.primary:hover { filter: brightness(1.08); }
+
+  .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; }
+  .problem-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px;
+  }
+  .problem-card .k { font-size: 13px; color: var(--accent); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+  .problem-card p { color: var(--muted); font-size: 15px; }
+  .problem-card p strong { color: var(--text); }
+
+  table.diff { width: 100%; border-collapse: collapse; margin-top: 32px; font-size: 15px; }
+  table.diff th {
+    text-align: left; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--faint); padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  table.diff td { padding: 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.diff tr:last-child td { border-bottom: none; }
+  table.diff td:first-child { font-weight: 700; white-space: nowrap; }
+  table.diff .yes { color: var(--accent); font-weight: 600; }
+  table.diff td.muted, table.diff .muted { color: var(--muted); }
+
+  .lanes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 36px; }
+  .lane {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px;
+  }
+  .lane.full { grid-column: 1 / -1; }
+  .lane .k { font-size: 12px; letter-spacing: 2px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .lane h3 { font-size: 18px; margin-bottom: 12px; }
+  .lane ul { list-style: none; }
+  .lane li { font-size: 14.5px; color: var(--muted); padding: 5px 0; border-top: 1px solid var(--border); }
+  .lane li code {
+    font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--text);
+    background: var(--surface-2); padding: 2px 7px; border-radius: 5px; margin-right: 8px;
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 24px;
+  }
+  .stat .num { font-size: 40px; font-weight: 700; letter-spacing: -1px; }
+  .stat .num.pass { color: var(--green); }
+  .stat .num.block { color: var(--red); }
+  .stat .num.amber { color: var(--accent); }
+  .stat .label { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); margin: 8px 0 10px; font-weight: 600; }
+  .stat p { font-size: 14.5px; color: var(--muted); }
+  .stat p strong { color: var(--text); }
+
+  .quick {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px; margin-top: 32px;
+  }
+  .quick pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px;
+    line-height: 1.9; overflow-x: auto;
+  }
+  .quick .c { color: var(--faint); }
+  .quick .p { color: var(--accent); }
+
+  .note {
+    margin-top: 28px; padding: 18px 22px; border-left: 3px solid var(--accent);
+    background: var(--accent-dim); border-radius: 0 10px 10px 0;
+    color: var(--muted); font-size: 15px;
+  }
+  .note strong { color: var(--text); }
+
+  footer { padding: 56px 0; border-top: 1px solid var(--border); }
+  footer .links { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 20px; }
+  footer a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 600; }
+  footer a:hover { color: var(--accent); }
+  footer .fine { color: var(--faint); font-size: 13.5px; }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 36px; }
+    .problem-grid, .lanes, .stats { grid-template-columns: 1fr; }
+    section { padding: 52px 0; }
+    .hero { padding: 72px 0 56px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">evalwarden</div>
+    <h1>A linter for evals,<br><span class="dim">not another eval framework.</span></h1>
+    <p class="lede">Benchmark scores get cited as proof of capability. Almost nobody audits the benchmarks themselves. evalwarden reads your eval artifacts and tells you <strong>whether the score can be trusted</strong> — the dataset, the evidence boundary, the grader, the run records, and the cost.</p>
+    <div class="install">
+      <span class="prompt">$</span><code>pip install evalwarden</code>
+    </div>
+    <div class="ctas">
+      <a class="btn primary" href="https://github.com/jurayh/evalwarden">GitHub</a>
+      <a class="btn" href="https://pypi.org/project/evalwarden/">PyPI</a>
+      <a class="btn" href="https://github.com/jurayh/evidence-registry">Evidence registry</a>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2>The score looks fine. The score is meaningless.</h2>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="k">Leaked evidence</div>
+        <p>A solver reads the <strong>task ID from the environment</strong>, looks up the gold answer, and reports 100%. The harness never noticed.</p>
+      </div>
+      <div class="problem-card">
+        <div class="k">Untrusted judges</div>
+        <p>A model judge is <strong>uncalibrated, biased, and self-contradictory</strong> — and nobody measured any of it before citing its verdicts.</p>
+      </div>
+      <div class="problem-card">
+        <div class="k">Dead datasets</div>
+        <p><strong>Two-thirds of the benchmark</strong> is items every model already answers. Perfect judges scoring dead examples is theater.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">How it differs</div>
+    <h2>Not a framework. Not a leaderboard. A linter.</h2>
+    <table class="diff">
+      <tr><th></th><th>Runs evals</th><th>Ranks models</th><th>Audits the measurement</th></tr>
+      <tr><td>Eval frameworks <span class="muted" style="font-weight:400">(Inspect AI, Promptfoo, lm-eval)</span></td><td class="yes">Yes</td><td class="muted">Sometimes</td><td class="muted">No</td></tr>
+      <tr><td>Leaderboards</td><td class="muted">No</td><td class="yes">Yes</td><td class="muted">No</td></tr>
+      <tr><td>One-off audit notebooks</td><td class="muted">No</td><td class="muted">No</td><td class="muted">Once, then rots</td></tr>
+      <tr><td><span class="yes">evalwarden</span></td><td class="muted">Never — read-only adapters</td><td class="muted">No</td><td class="yes">Yes, in CI</td></tr>
+    </table>
+    <div class="note"><strong>Precision over recall, always.</strong> A false contamination accusation is worse than a missed issue. Checks stay silent when the evidence is thin, every finding carries a confidence label, and every report card says <strong>diagnostic, not a certification</strong>.</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The check catalog</div>
+    <h2>Twenty checks across five lanes.</h2>
+    <div class="lanes">
+      <div class="lane">
+        <div class="k">ENV</div>
+        <h3>The evidence boundary</h3>
+        <ul><li><code>ENV-001</code>Eval-detection signal or leaked state visible to the agent</li></ul>
+      </div>
+      <div class="lane">
+        <div class="k">GRAD</div>
+        <h3>The grader</h3>
+        <ul>
+          <li><code>GRAD-001</code>Verifier writable by the agent</li>
+          <li><code>GRAD-002</code>Grader grants credit without completion</li>
+        </ul>
+      </div>
+      <div class="lane">
+        <div class="k">COST</div>
+        <h3>The run records</h3>
+        <ul>
+          <li><code>COST-001</code>Cost per success not reported</li>
+          <li><code>COST-002</code>Successes cost multiple attempts each</li>
+          <li><code>COST-003</code>Most spend burned on attempts that never passed</li>
+          <li><code>COST-004</code>Runaway attempt burned far more than typical</li>
+        </ul>
+      </div>
+      <div class="lane">
+        <div class="k">DATA</div>
+        <h3>The dataset itself</h3>
+        <ul>
+          <li><code>DATA-001</code>Dataset looks saturated — most items solved by every model</li>
+          <li><code>DATA-002</code>Dataset contains near-duplicate items</li>
+        </ul>
+      </div>
+      <div class="lane full">
+        <div class="k">JUDGE</div>
+        <h3>The model judge</h3>
+        <ul>
+          <li><code>JUDGE-001</code>Judge lacks validation — no labels, unanchored rubric, hot single-sample</li>
+          <li><code>JUDGE-002</code>Pairwise order not counterbalanced</li>
+          <li><code>JUDGE-003</code>Judge contradicts itself on repeated judgments</li>
+          <li><code>JUDGE-004</code>Judge disagrees with reference labels</li>
+          <li><code>JUDGE-005</code>Position bias — presentation order predicts the winner</li>
+          <li><code>JUDGE-006</code>Verbosity bias — longer answers win disproportionately</li>
+          <li><code>JUDGE-007</code>Judge confidence miscalibrated — stated confidence does not track accuracy</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Proof on real benchmarks</div>
+    <h2>It does not manufacture problems. It finds real ones.</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="num pass">100/100</div>
+        <div class="label">SWE-bench Verified · Pass</div>
+        <p><strong>Zero findings.</strong> Gold patches and grading stay harness-side where the agent cannot reach them. A clean benchmark reads clean.</p>
+      </div>
+      <div class="stat">
+        <div class="num block">85/100</div>
+        <div class="label">HealthBench · Blocked</div>
+        <p>The model judge ships with <strong>no calibration set in the eval definition</strong> — anyone auditing the artifact alone cannot verify the judge.</p>
+      </div>
+      <div class="stat">
+        <div class="num amber">67% vs 7%</div>
+        <div class="label">MMLU vs GPQA · Saturation</div>
+        <p><strong>Two-thirds of the MMLU slice is dead</strong> — answered correctly by every model — versus 7% on GPQA. The check says so with a number.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Quickstart</div>
+    <h2>Sixty seconds to your first audit.</h2>
+    <div class="quick">
+<pre><span class="c"># install</span>
+<span class="p">$</span> pip install evalwarden
+
+<span class="c"># audit the deliberately broken demo benchmark</span>
+<span class="p">$</span> evalwarden demo
+
+<span class="c"># audit your own eval artifacts</span>
+<span class="p">$</span> evalwarden audit path/to/eval --output report.html</pre>
+    </div>
+    <div class="note">Deterministic checks with policy exit codes, so the same audit runs locally and as a CI gate. <strong>Try the cheat first:</strong> <span style="font-family:ui-monospace,Menlo,monospace;font-size:14px">evalwarden demo --fixture leaky</span> reports 0/100 BLOCKED on a solver that reads the task ID from the environment.</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/jurayh/evalwarden">GitHub</a>
+      <a href="https://pypi.org/project/evalwarden/">PyPI</a>
+      <a href="https://github.com/jurayh/evidence-registry">Evidence registry</a>
+    </div>
+    <div class="fine">evalwarden is MIT-licensed. Integrity scores are diagnostic, not a certification.</div>
+  </div>
+</footer>
+
+</body>
+</html>

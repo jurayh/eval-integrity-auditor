@@ -1,133 +1,67 @@
 # evalwarden
 
-**A linter for agent evaluations, not another eval framework.**
+**A linter for evals, not another eval framework.**
 
-## The problem
+Benchmark scores get cited as proof of capability: which model to deploy, which paper to accept, which agent to buy. Almost nobody audits the benchmarks themselves. A solver can read the task ID from the environment, look up the gold answer, and report 100%. A grader can be writable by the agent it grades. A model judge can be uncalibrated, biased, and self-contradictory — while two-thirds of the dataset is dead weight every model already answers. The score looks fine. The score is meaningless.
 
-Benchmark scores ship decisions: which model to deploy, which paper to
-accept, which agent to buy. But the tools that run evals never check whether
-the measurement itself is sound. A solver can read the task ID from the
-environment, look up the gold answer, and report 100%. A grader can be
-writable by the agent it grades. A model judge can be uncalibrated, biased,
-and self-contradictory. The score looks fine. The score is meaningless.
-
-evalwarden audits the measurement system around a score: the dataset, the
-evidence boundary, the grader, the run records, and the cost. It never runs
-your evals and never changes your harness. It reads your eval artifacts and
-tells you whether the score can be trusted, with file-level evidence for
-every finding.
+evalwarden audits the measurement system around a score: the dataset, the evidence boundary, the grader, the run records, and the cost. It never runs your evals and never changes your harness. It reads your eval artifacts and tells you whether the score can be trusted, with file-level evidence for every finding.
 
 ![evalwarden HTML integrity report](docs/images/report-screenshot.png)
 
 ## Quickstart
 
-Three steps, about a minute, no model key required:
-
 ```bash
-pip install .
+pip install evalwarden
 evalwarden demo
 ```
 
-That audits a deliberately broken benchmark and writes
-`evalwarden-demo-report.html`. Open it in a browser.
+That audits a deliberately broken benchmark and writes `evalwarden-demo-report.html`. Open it in a browser. No model key required.
 
 ## The flagship demo: caught red-handed
 
-A tiny synthetic coding benchmark reports **3/3 PASS**. The solver earned
-none of it: it reads `TASK_ID` from the environment, looks up the answer in
-`gold_map.json`, and submits the gold patch. The auditor flags the exact
-leak channels, each with file-level evidence:
+A tiny synthetic coding benchmark reports **3/3 PASS**. The solver earned none of it: it reads `TASK_ID` from the environment, looks up the answer in `gold_map.json`, and submits the gold patch. The auditor flags the exact leak channels, each with file-level evidence:
 
 - `ENV-001` — `TASK_ID`, `RUN_ID`, `AGENT_TOKEN` visible to the agent
 - `ENV-001` — `gold_map.json` mounted where the agent can read it
 - `GRAD-001` — the verifier is writable by the agent
 
-Result: **0/100 BLOCKED**. Then the `hardened` fixture shows the fix:
-opaque IDs, no gold mounted, read-only verifier, a genuine solver. Result:
-**100/100 PASS**. Same benchmark, same auditor, before and after.
+Result: **0/100 BLOCKED**. Then the `hardened` fixture shows the fix: opaque IDs, no gold mounted, read-only verifier, a genuine solver. Result: **100/100 PASS**. Same benchmark, same auditor, before and after.
 
 ```bash
 evalwarden demo --fixture leaky     # the cheat: 0/100 BLOCKED
 evalwarden demo --fixture hardened  # the fix: 100/100 PASS
 ```
 
-## A tour: finding, explain, fix
+## The check catalog
 
-Every finding carries its evidence, and every check explains itself. Here
-is the full loop on the flagship cheat. First the finding:
+Deterministic, high-precision checks. A linter that cries contamination on a clean eval is worse than no auditor, so every finding carries a **confidence** label and clean evals produce zero findings.
 
-```bash
-$ evalwarden demo --fixture leaky
-...
-E ENV-001 [error|confidence:high] Eval-detection variable visible to agent: TASK_ID
-    evidence: environment variable 'TASK_ID' is visible to the agent/solver.
-    evidence: Known eval-detection signal: an agent can branch on this value
-              (e.g. look up a gold patch by task ID).
-    at: environment.json -- env.TASK_ID
-```
-
-Then what it means and how to fix it:
-
-```bash
-$ evalwarden explain ENV-001
-ENV-001: Eval-detection signal or leaked state visible to the agent
-
-threat: If the agent can observe run IDs, task IDs, or agent tokens -- or read
-answer-bearing material such as gold patches -- it can condition its behavior
-on the measurement instead of the task. The resulting score measures the leak,
-not the capability.
-
-fix: Remove eval-detection variables from the agent's environment (keep them
-harness-side only), mount gold/answer material so the agent cannot read it,
-and re-run.
-```
-
-Apply the fix, which is exactly what the `hardened` fixture does, and the
-same audit goes green:
-
-```bash
-$ evalwarden demo --fixture hardened
-...
-evalwarden audit: tinycode-hardened-1.0
-Integrity: 100 / 100 PASS (0 errors, 0 high, 0 medium, 0 low)
-```
-
-## Demo fixtures
-
-Every fixture ships inside the package, so the demo works from any
-directory. Run any of them with `evalwarden demo --fixture <name>`:
-
-| Fixture | What it shows |
-|---------|---------------|
-| `leaky` | The flagship: a cheating solver caught red-handed. 0/100 BLOCKED. |
-| `hardened` | The fix: opaque IDs, no gold mounted, read-only verifier. A genuine solver passes and the audit is clean. 100/100 PASS. |
-| `judge_bad` | A miscalibrated model judge: unvalidated, AB-only protocol, self-contradicting repeats, 48% reference agreement, position and verbosity bias. 50/100 BLOCKED. |
-| `judge_clean` | The validated judge: counterbalanced, temperature 0, anchored rubric, 92% agreement. 100/100 PASS. |
-| `cost_wasteful` | A wasteful run: 2.67 tries per success, 91% of spend on attempts that never passed, one 22,000-token runaway loop. |
-| `cost_clean` | The same tasks solved first try at modest cost. No cost findings. |
-| `promptfoo_bad` | A Promptfoo eval with `TASK_ID`/`RUN_ID` planted in env (ENV-001) and uncalibrated `llm-rubric` assertions (JUDGE-001). 35/100 BLOCKED. |
-| `promptfoo_clean` | The same Promptfoo eval done right: innocuous env, deterministic assertions, full token/latency reporting. 100/100 PASS. |
-
-```bash
-evalwarden demo --fixture judge_bad
-evalwarden demo --fixture cost_wasteful --budget-per-task 0.05
-```
-
-## Checks
-
-Deterministic, high-precision checks only. A linter that cries contamination
-on a clean eval is worse than no auditor, so every finding carries a
-**confidence** label and clean evals produce zero findings.
+**ENV — the evidence boundary**
 
 | ID | Check | Severity |
 |----|-------|----------|
 | ENV-001 | Eval-detection signal or leaked state visible to the agent | Error |
+
+**GRAD — the grader**
+
+| ID | Check | Severity |
+|----|-------|----------|
 | GRAD-001 | Verifier writable by the agent | Error |
 | GRAD-002 | Grader grants credit without completion | Error |
+
+**COST — the run records**
+
+| ID | Check | Severity |
+|----|-------|----------|
 | COST-001 | Cost per success not reported (usage data missing) | Medium |
 | COST-002 | Successes cost multiple attempts each (retry multiplier) | Medium |
 | COST-003 | Most spend burned on attempts that never passed | Medium |
 | COST-004 | Runaway attempt burned far more than a typical one | Medium |
+
+**JUDGE — the model judge**
+
+| ID | Check | Severity |
+|----|-------|----------|
 | JUDGE-001 | Model judge lacks validation (no labels, unanchored rubric, hot single-sample) | High |
 | JUDGE-002 | Pairwise order not counterbalanced | High |
 | JUDGE-003 | Judge contradicts itself on repeated judgments | High |
@@ -135,72 +69,50 @@ on a clean eval is worse than no auditor, so every finding carries a
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 | JUDGE-007 | Judge confidence miscalibrated (stated confidence does not track accuracy) | Medium |
-| DATA-001 | Eval dataset looks saturated (most items answered correctly by every model) | Medium |
-| DATA-002 | Eval dataset contains near-duplicate items | Low |
+
+**DATA — the dataset itself**
+
+| ID | Check | Severity |
+|----|-------|----------|
+| DATA-001 | Dataset looks saturated (most items answered correctly by every model) | Medium |
+| DATA-002 | Dataset contains near-duplicate items | Low |
 
 `evalwarden explain COST-004` prints any check's threat model, evidence, and fix.
 
-## Report cards
+## How evalwarden differs
 
-A report card is the public face of an audit: one self-contained HTML page
-per benchmark with the verdict, per-category scores, key findings, and a
-methodology footer. Generate one per eval, or a whole set plus an index:
+**Eval frameworks run evals. evalwarden audits them.** Inspect AI, Promptfoo, and lm-eval-harness execute tasks and compute scores. evalwarden never executes anything: read-only adapters translate harness artifacts into a framework-neutral integrity model, and checks only ever see that model. That boundary is what keeps this a linter instead of another framework.
 
-```bash
-evalwarden report-card path/to/eval --output card.html
-evalwarden report-cards eval-a/ eval-b/ --output-dir cards/
-```
+**Leaderboards rank models. evalwarden grades the tests.** A leaderboard tells you who won on a benchmark. evalwarden tells you whether the benchmark was worth winning on — whether the dataset still discriminates, the judge is calibrated, and the evidence boundary held.
 
-Example cards generated from the demo fixtures live in
-[`examples/report-cards/`](examples/report-cards/) ([index](examples/report-cards/index.html)):
-a blocked cheat, a clean pass, a bad judge, and a validated judge. A full
-sample audit report is at [`examples/sample-report.html`](examples/sample-report.html).
+**One-off audit notebooks don't run in CI. These checks do.** A notebook audit is a snapshot that rots. evalwarden's checks are deterministic rules with policy exit codes (`0` passes, `1` findings cross `--fail-on`), so the same audit runs on every commit.
 
-## Real benchmarks
+**Precision over recall, always.** A false contamination accusation is worse than a missed issue. Checks stay silent when the evidence is thin, every finding carries a confidence label, and every card says **"Diagnostic, not a certification"** — the report says "no blocking findings observed under this policy," never "certified safe."
 
-The linter also runs against real public benchmarks, translated
-mechanically from their published definitions: pinned sources, no invented
-traces, provenance committed alongside. Cards live in
-[`examples/report-cards/real/`](examples/report-cards/real/):
+## Proof on real benchmarks
+
+The linter runs against real public benchmarks, translated mechanically from their published definitions: pinned sources, no invented traces, provenance committed alongside. Cards live in [`examples/report-cards/real/`](examples/report-cards/real/):
 
 | Benchmark | Result |
 |-----------|--------|
-| [SWE-bench Verified](examples/report-cards/real/swe-bench-verified-via-inspect-evals.html) (via inspect_evals) | 100/100 PASS: gold patches, test patches, and grading stay harness-side where the agent cannot reach them |
-| [HealthBench](examples/report-cards/real/healthbench-via-inspect-evals.html) (via inspect_evals) | 85/100 BLOCKED: the model judge (`openai/gpt-4o-mini`) ships with no calibration set in the definition |
+| [SWE-bench Verified](examples/report-cards/real/swe-bench-verified-via-inspect-evals.html) (via inspect_evals) | **100/100 PASS, zero findings.** Gold patches, test patches, and grading stay harness-side where the agent cannot reach them. It does not manufacture problems. |
+| [HealthBench](examples/report-cards/real/healthbench-via-inspect-evals.html) (via inspect_evals) | **85/100 BLOCKED.** The model judge ships with no calibration set in the eval definition itself. (The authors validated their grader in the paper through a separate meta-eval task — the linter flags precisely the gap: anyone auditing the artifact alone cannot verify the judge.) |
+| MMLU vs GPQA (DATA-001 saturation) | **67% of MMLU items are dead** — answered correctly by every model tested — vs **7% on GPQA**. Two-thirds of the slice measures nothing; the check says so with a number. |
 
-The HealthBench card deserves one sentence of context: the benchmark's
-authors validated their grader in the paper through a separate meta-eval
-task. The linter flags that the eval definition itself carries no
-calibration evidence, which is precisely the gap: anyone auditing the
-artifact alone cannot verify the judge. The
-[reading guide](examples/report-cards/real/README.md) walks through both
-cards, the translation, and the scope limits.
+The [reading guide](examples/report-cards/real/README.md) walks through the cards, the translation, and the scope limits.
 
 ## Evidence registry
 
-Report cards live on as versioned, independently regenerable evidence in the
-[Evalwarden Evidence Registry](https://github.com/jurayh/evidence-registry):
-each entry is an evidence pack binding an executable audit to pinned public
-inputs and a one-command regeneration, so a stranger can verify the card.
+Report cards live on as versioned, independently regenerable evidence in the [Evalwarden Evidence Registry](https://github.com/jurayh/evidence-registry): each entry is an evidence pack binding an executable audit to pinned public inputs and a one-command regeneration, so a stranger can verify the card.
 
 ## How it works
-
-Adapters translate harness artifacts into a framework-neutral integrity
-model. Checks only ever see that model, never harness internals. That
-boundary is what keeps this a linter instead of another eval framework.
 
 ```
 eval artifact/ ──▶ adapter (inspect | promptfoo) ──▶ integrity model ──▶ checks ──▶ report
      read-only, offline                          data · boundary · grader · runs
 ```
 
-v0.5 ships two adapters: `inspect` for Inspect-style eval artifact
-directories, and `promptfoo` for Promptfoo's `promptfooconfig.yaml` plus the
-JSON export from `promptfoo eval --output results.json`. Both are strictly
-read-only and offline; variable names are kept for analysis while secret
-values never enter the normalized model. Harbor and BrowserGym plug into the
-same registry. A new check is one module plus one registration line; a new
-reporter is one module plus one import.
+Two adapters ship: `inspect` for Inspect-style eval artifact directories, and `promptfoo` for Promptfoo's `promptfooconfig.yaml` plus the JSON export from `promptfoo eval --output results.json`. Both are strictly read-only and offline; variable names are kept for analysis while secret values never enter the normalized model. A new check is one module plus one registration line; a new reporter is one module plus one import.
 
 ## CLI
 
@@ -216,22 +128,15 @@ evalwarden report-cards <eval...> [--fixtures a,b] [--output-dir cards/]
 evalwarden explain <CHECK-ID>
 ```
 
-Exit codes: `0` policy passes, `1` findings cross `--fail-on`, `2` the audit
-could not complete. The same policy runs locally and as a CI gate.
+Exit codes: `0` policy passes, `1` findings cross `--fail-on`, `2` the audit could not complete. The same policy runs locally and as a CI gate.
 
 ## Reports
 
-Self-contained HTML (inline CSS, no JavaScript, no remote assets), terminal
-output, JSON findings, and report cards. Secret values are never stored, only
-variable *names* enter the model. Integrity scores are diagnostic, not a
-certification: the report says "no blocking findings observed under this
-policy," never "certified safe."
+Self-contained HTML (inline CSS, no JavaScript, no remote assets), terminal output, JSON findings, and report cards. Secret values are never stored — only variable *names* enter the model. Integrity scores are diagnostic, not a certification.
 
 ## Non-goals
 
-Running or scheduling evaluations, replacing task/solver/scorer APIs, trace
-observability, generic red-teaming, public leaderboards, declaring any
-benchmark contamination-free.
+Running or scheduling evaluations, replacing task/solver/scorer APIs, trace observability, generic red-teaming, public leaderboards, declaring any benchmark contamination-free.
 
 ## Development
 
@@ -240,6 +145,4 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The test suite is the product's credibility: every rule has positive,
-negative, and precision fixtures (clean evals must *not* be flagged), the
-adapter has a read-only contract test, and the fixtures run end to end.
+The test suite is the product's credibility: every rule has positive, negative, and precision fixtures (clean evals must *not* be flagged), the adapter has a read-only contract test, and the fixtures run end to end.
