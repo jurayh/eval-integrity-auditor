@@ -69,6 +69,7 @@ Deterministic, high-precision checks. A linter that cries contamination on a cle
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 | JUDGE-007 | Judge confidence miscalibrated (stated confidence does not track accuracy) | Medium |
+| JUDGE-008 | Redundant judges in panel (a judge never differs from the rest) | Medium |
 
 **DATA — the dataset itself**
 

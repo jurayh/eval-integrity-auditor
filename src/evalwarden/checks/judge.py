@@ -6,7 +6,9 @@ counterbalancing. JUDGE-003..006 are the v1 deterministic calibration slice:
 self-consistency across repeats, agreement with reference labels, and
 deterministic heuristics for position and verbosity bias. JUDGE-007 is the
 probabilistic calibration slice: it measures whether the judge's stated
-confidence tracks its empirical accuracy on labeled items.
+confidence tracks its empirical accuracy on labeled items. JUDGE-008 is the
+ensemble slice: in a multi-judge panel, it measures whether each judge
+contributes independent signal or just burns budget agreeing with the rest.
 
 Precision-first throughout: bias heuristics carry minimum-sample guards and
 Medium severity/confidence labels, and a clean, well-run judge produces no
@@ -18,6 +20,11 @@ from __future__ import annotations
 from collections import defaultdict
 
 from ..calibration import bin_pairs, expected_calibration_error, mean_signed_gap
+from ..ensemble import (
+    ablation_value,
+    max_agreement_partner,
+    unique_contribution,
+)
 from ..model import Confidence, Finding, IntegrityModel, Judgment, Severity, SourceLocation
 from .base import Check, CheckMeta
 
@@ -30,6 +37,10 @@ SCORE_RANGE_FRAC = 0.2   # score spread beyond this fraction of scale is inconsi
 MIN_CALIBRATION_PAIRS = 30  # labeled confidence pairs needed before judging calibration
 ECE_THRESHOLD = 0.15     # ECE at or above this is clear miscalibration
 GAP_MARGIN = 0.10        # |mean signed gap| at or above this names a direction
+MIN_PANEL_JUDGES = 2     # fewer judges than this: no panel to judge redundant
+MIN_COMMON_ITEMS = 30    # common items below this: stay silent
+MIN_FLAG_ITEMS = 50      # common items below this: measure, but never flag
+REDUNDANCY_RATE = 0.05   # unique contribution below this is a finding
 
 
 def _is_judge(model: IntegrityModel) -> bool:
@@ -493,6 +504,109 @@ class JudgeCalibrationCheck(Check):
         ]
 
 
+def _panel_verdict_of(j: Judgment) -> str | None:
+    """One comparable verdict per judgment: pairwise winner, else top score."""
+    if j.winner is not None:
+        return j.winner
+    if j.scores:
+        top = max(j.scores.values())
+        return min(c for c, s in j.scores.items() if s == top)
+    return None
+
+
+class EnsembleRedundancyCheck(Check):
+    meta = CheckMeta(
+        id="JUDGE-008",
+        title="Redundant judges in panel",
+        threat=(
+            "A judge that never differs from the rest of the panel adds no "
+            "independent signal: the panel pays for N votes and gets fewer. "
+            "Copied or near-identical judges silently collapse the ensemble "
+            "into a single effective vote while the budget says otherwise."
+        ),
+        remediation=(
+            "Drop or diversify the redundant judges: keep one member of each "
+            "mutually agreeing bloc, or replace copies with judges that "
+            "disagree productively. When two judges agree perfectly, verdict "
+            "data alone cannot tell who copies whom -- investigate the "
+            "pipeline, not just the votes."
+        ),
+    )
+
+    def run(self, model: IntegrityModel) -> list[Finding]:
+        if not _is_judge(model):
+            return []
+        # First verdict per (judge, task); unattributed judgments cannot be
+        # placed in a panel.
+        by_judge: dict[str, dict[str, str]] = {}
+        for j in model.judgments:
+            if j.judge_id is None:
+                continue
+            verdict = _panel_verdict_of(j)
+            if verdict is None:
+                continue
+            by_judge.setdefault(j.judge_id, {}).setdefault(j.task_id, verdict)
+        judge_ids = sorted(by_judge)
+        if len(judge_ids) < MIN_PANEL_JUDGES:
+            return []
+        common = set(by_judge[judge_ids[0]])
+        for j in judge_ids[1:]:
+            common &= set(by_judge[j])
+        if len(common) < MIN_COMMON_ITEMS:
+            return []
+        votes = {j: {t: by_judge[j][t] for t in common} for j in judge_ids}
+        stats = {j: unique_contribution(votes, j) for j in judge_ids}
+        if len(common) < MIN_FLAG_ITEMS:
+            return []
+        flagged = [j for j in judge_ids if stats[j][0] < REDUNDANCY_RATE]
+        if not flagged:
+            return []
+        labels = model.grader.reference_labels
+        truth = {t: labels[t] for t in common if t in labels}
+        evidence = []
+        for j in flagged:
+            rate, differs, decisive = stats[j]
+            partner, agree = max_agreement_partner(votes, j)
+            line = (
+                f"judge '{j}': unique contribution {rate:.1%} "
+                f"({differs}/{decisive} decisive items) -- differs from the "
+                f"majority of the other judges on fewer than "
+                f"{REDUNDANCY_RATE:.0%} of items."
+            )
+            if partner is not None:
+                line += f" Mirrors judge '{partner}' on {agree:.0%} of items."
+            if truth:
+                abl = ablation_value(votes, truth, j)
+                line += (
+                    f" Ablation value {abl:+.2f}: removing '{j}' changes "
+                    f"panel truth-agreement by {abl:+.0%}."
+                )
+            evidence.append(line)
+        evidence.append(
+            "When two judges agree perfectly, both are flagged: the data "
+            "cannot tell who copies whom."
+        )
+        evidence.append(
+            "Statistical signal: corroborate on a held-out item set before "
+            "treating it as proof."
+        )
+        return [
+            Finding(
+                id=self.meta.id,
+                title=(
+                    f"Redundant judges in panel: {', '.join(flagged)} "
+                    f"({len(common)} common items)"
+                ),
+                severity=Severity.MEDIUM,
+                confidence=Confidence.MEDIUM,
+                description=self.meta.threat,
+                evidence=evidence,
+                locations=[_judge_loc(model, "judgments[].judge_id vs judgments[].winner")],
+                remediation=self.meta.remediation,
+            )
+        ]
+
+
 CHECKS = [
     UnvalidatedJudgeCheck(),  # JUDGE-001
     PairOrderCheck(),  # JUDGE-002
@@ -501,4 +615,5 @@ CHECKS = [
     PositionBiasCheck(),  # JUDGE-005
     VerbosityBiasCheck(),  # JUDGE-006
     JudgeCalibrationCheck(),  # JUDGE-007
+    EnsembleRedundancyCheck(),  # JUDGE-008
 ]

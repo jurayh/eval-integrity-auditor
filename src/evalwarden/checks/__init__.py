@@ -18,7 +18,7 @@ REGISTRY: list[Check] = [
     VerifierWritableCheck(),  # GRAD-001
     EmptyPathCheck(),  # GRAD-002
     *COST_CHECKS,  # COST-001 .. COST-004
-    *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-007
+    *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-008
     *DATA_CHECKS,  # DATA-001 .. DATA-002
 ]
 

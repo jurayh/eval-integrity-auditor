@@ -133,6 +133,10 @@ class Judgment:
     # Stated probability the verdict is correct, 0..1. None when the harness
     # does not record confidence (adapters populate it when available).
     confidence: float | None = None
+    # Which judge in a panel produced this verdict. None for single-judge
+    # evals (adapters populate it when the harness runs a multi-judge panel;
+    # used by JUDGE-008 ensemble redundancy).
+    judge_id: str | None = None
 
 
 @dataclass

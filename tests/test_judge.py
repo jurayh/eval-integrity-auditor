@@ -1,9 +1,10 @@
-"""JUDGE-001 .. JUDGE-007 tests: positive, negative, and precision cases."""
+"""JUDGE-001 .. JUDGE-008 tests: positive, negative, and precision cases."""
 from __future__ import annotations
 
 import random
 
 from evalwarden.checks.judge import (
+    EnsembleRedundancyCheck,
     JudgeCalibrationCheck,
     PositionBiasCheck,
     ReferenceAgreementCheck,
@@ -23,6 +24,7 @@ c4 = ReferenceAgreementCheck()
 c5 = PositionBiasCheck()
 c6 = VerbosityBiasCheck()
 c7 = JudgeCalibrationCheck()
+c8 = EnsembleRedundancyCheck()
 
 
 def _ids(findings):
@@ -346,3 +348,90 @@ def test_judge007_script_grader_not_flagged():
     judgments = _calibration_judgments(100, [0.9], lambda c: 0.6, seed=11)
     model = make_model(grader=Grader(kind="script"), judgments=judgments)
     assert c7.run(model) == []
+
+
+def _panel_judgments(seed, specs, n=200):
+    """Synthetic panel judgments. specs: judge_id -> accuracy or ("copy", id).
+
+    Returns (judgments, truth). Binary verdicts against random truth.
+    """
+    rng = random.Random(seed)
+    judgments = []
+    winners = {}
+    for task_i in range(n):
+        task_id = f"t{task_i:03d}"
+        truth = rng.choice(["sol-a", "sol-b"])
+        for jid, spec in specs.items():
+            if isinstance(spec, tuple):
+                winner = winners[(spec[1], task_id)]
+            else:
+                winner = truth if rng.random() < spec else (
+                    "sol-b" if truth == "sol-a" else "sol-a"
+                )
+            winners[(jid, task_id)] = winner
+            judgments.append(make_judgment(task_id=task_id, winner=winner, judge_id=jid))
+    truth_map = {}
+    rng2 = random.Random(seed)
+    for task_i in range(n):
+        truth_map[f"t{task_i:03d}"] = rng2.choice(["sol-a", "sol-b"])
+    return judgments, truth_map
+
+
+def _panel_model(seed, specs, n=200, with_labels=False):
+    judgments, truth = _panel_judgments(seed, specs, n)
+    grader = make_judge_grader(reference_labels=truth if with_labels else {})
+    return make_model(grader=grader, judgments=judgments)
+
+
+def test_judge008_flags_copier():
+    # C always copies A: C must be flagged. A is flagged too -- with perfect
+    # mutual agreement the data cannot tell who copies whom.
+    model = _panel_model(7, {"A": 0.7, "B": 0.7, "C": ("copy", "A")})
+    findings = c8.run(model)
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.id == "JUDGE-008"
+    assert "C" in f.title and "A" in f.title
+    assert f.severity == Severity.MEDIUM
+    assert f.confidence == Confidence.MEDIUM
+    assert any("Mirrors judge 'A'" in e for e in f.evidence)
+
+
+def test_judge008_silent_on_independent_panel():
+    model = _panel_model(11, {"A": 0.7, "B": 0.7, "D": 0.7})
+    assert c8.run(model) == []
+
+
+def test_judge008_silent_single_judge():
+    model = _panel_model(7, {"A": 0.7})
+    assert c8.run(model) == []
+
+
+def test_judge008_silent_without_judge_ids():
+    judgments = [make_judgment(task_id=f"t{i:03d}") for i in range(100)]
+    model = make_model(grader=make_judge_grader(), judgments=judgments)
+    assert c8.run(model) == []
+
+
+def test_judge008_silent_below_min_common_items():
+    model = _panel_model(7, {"A": 0.7, "B": 0.7, "C": ("copy", "A")}, n=20)
+    assert c8.run(model) == []
+
+
+def test_judge008_silent_between_30_and_50_items():
+    # Measurable but below the flag threshold: never flag.
+    model = _panel_model(7, {"A": 0.7, "B": 0.7, "C": ("copy", "A")}, n=40)
+    assert c8.run(model) == []
+
+
+def test_judge008_silent_non_judge_grader():
+    judgments, _ = _panel_judgments(7, {"A": 0.7, "B": 0.7, "C": ("copy", "A")})
+    model = make_model(grader=Grader(kind="script"), judgments=judgments)
+    assert c8.run(model) == []
+
+
+def test_judge008_ablation_reported_with_labels():
+    model = _panel_model(7, {"A": 0.7, "B": 0.7, "C": ("copy", "A")}, with_labels=True)
+    findings = c8.run(model)
+    assert len(findings) == 1
+    assert any("Ablation value" in e for e in findings[0].evidence)
