@@ -26,6 +26,10 @@ Pinned sources (all public, no auth):
   (URL pinned in the task source)
 - WritingBench: benchmark_all.jsonl inside the inspect_evals repo at the pinned
   commit (fetched via raw.githubusercontent.com at that commit)
+- MMLU: cais/mmlu (config "all", test split) rev
+  c30699e8356da336a370243923dbaf21066bb9fe (revision pinned in the task
+  source); prompt template MultipleChoiceTemplate.SINGLE_ANSWER from
+  UKGovernmentBEIS/inspect_ai src/inspect_ai/solver/_multiple_choice.py
 
 Usage:
     python3 build_real_cards.py --work-dir /tmp/real_work
@@ -517,12 +521,183 @@ def build_writingbench(work: Path) -> Path:
     return out
 
 
+# Exact input prompt template: MultipleChoiceTemplate.SINGLE_ANSWER from
+# inspect_ai (src/inspect_ai/solver/_multiple_choice.py), based on
+# openai/simple-evals mmlu_eval.py. Read from UKGovernmentBEIS/inspect_ai
+# main on 2026-09-29; the task resolves it via MMLU_MULTISHOT_QUESTION_TEMPLATE.
+MMLU_PROMPT_TEMPLATE = (
+    "Answer the following multiple choice question. The entire content of "
+    "your response should be of the following format: 'ANSWER: $LETTER' "
+    "(without quotes) where LETTER is one of {letters}.\n"
+    "\n"
+    "{question}\n"
+    "\n"
+    "{choices}"
+)
+MMLU_DATASET = "cais/mmlu"
+MMLU_CONFIG = "all"
+MMLU_SPLIT = "test"
+# Revision pinned in the task source (MMLU_REVISION in mmlu.py).
+MMLU_REVISION = "c30699e8356da336a370243923dbaf21066bb9fe"
+MMLU_ROWS_URL = (
+    f"https://datasets-server.huggingface.co/rows?dataset={MMLU_DATASET}"
+    f"&config={MMLU_CONFIG}&split={MMLU_SPLIT}&offset=0&length={N_SAMPLES}"
+)
+
+
+def _format_mmlu_prompt(question: str, choices: list[str]) -> str:
+    # Letters and choice lines verbatim from format_mmlu_question /
+    # format_mmlu_choices in mmlu.py.
+    letters = ",".join(chr(ord("a") + i) for i in range(len(choices)))
+    choice_lines = "\n".join(
+        f"({chr(ord('a') + i)}) {c}" for i, c in enumerate(choices)
+    )
+    return MMLU_PROMPT_TEMPLATE.format(
+        letters=letters, question=question, choices=choice_lines
+    )
+
+
+def build_mmlu(work: Path) -> Path:
+    """Translate the inspect_evals mmlu_0_shot task definition (default args)."""
+    out = work / "mmlu"
+    out.mkdir(parents=True, exist_ok=True)
+
+    data = _get_json(MMLU_ROWS_URL)
+    rows = [r["row"] for r in data["rows"]]
+    assert len(rows) == N_SAMPLES, f"expected {N_SAMPLES} rows, got {len(rows)}"
+
+    tasks = []
+    for i, r in enumerate(rows):
+        tasks.append(
+            {
+                "id": f"mmlu-test-{i:05d}",
+                "prompt": _format_mmlu_prompt(r["question"], r["choices"]),
+                "metadata": {
+                    "subject": r["subject"],
+                    "n_choices": len(r["choices"]),
+                },
+            }
+        )
+
+    (out / "dataset.json").write_text(
+        json.dumps(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "eval_id": "MMLU via inspect_evals",
+                "tasks": tasks,
+                "notes": (
+                    f"Definition sample: {N_SAMPLES} of 14042 test questions "
+                    f"(57 subjects) from {MMLU_DATASET} config '{MMLU_CONFIG}' "
+                    f"rev {MMLU_REVISION[:12]}. The solver sees only the "
+                    "formatted multiple-choice question. The answer index is "
+                    "public in the dataset but EXCLUDED here: it is the "
+                    "harness-side sample target that choice() grades against, "
+                    "which the agent never sees. Sample = first 12 rows in "
+                    "dataset order via the datasets-server rows API; the "
+                    "task default (mmlu_0_shot) shuffles with seed 42 after "
+                    "dedup — the sample illustrates the instrument, not a "
+                    "particular eval draw."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "environment.json").write_text(
+        json.dumps(
+            {
+                "env": {},
+                "mounts": [],
+                "notes": (
+                    "The solver is multiple_choice over plain `generate` (no "
+                    "tools, no sandbox): GenerateConfig(temperature=0.0), "
+                    "non-CoT max tokens default GPT_5_MIN_TOKENS (16) with a "
+                    "model-dependent floor (get_max_tokens in mmlu.py). The "
+                    "task definition (mmlu.py) declares no agent-visible "
+                    "environment variables and no mounts."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "grader.json").write_text(
+        json.dumps(
+            {
+                "kind": "script",
+                "verifier": {
+                    "path": (
+                        "inspect_ai.scorer.choice: parses the model's selected "
+                        "letter from the completion and compares it to the "
+                        "harness-side target letter"
+                    ),
+                    "writable_by_agent": False,
+                },
+                "tests": ["letter-match (A/B/C/D)"],
+                "notes": (
+                    "choice() grades the selected letter against the sample "
+                    "target, which lives in harness-side sample metadata. "
+                    "Scoring runs harness-side after the agent submits; the "
+                    "agent never sees the target and has no write path to the "
+                    "scoring. Completions with no parseable letter score as "
+                    "incorrect (0.0); there is no empty-output credit path. "
+                    "No judge model is involved: JUDGE-001..006 do not apply."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "PROVENANCE.json").write_text(
+        json.dumps(
+            {
+                "benchmark": "MMLU (Hendrycks et al., 2020)",
+                "task_definition": "inspect_evals/mmlu @ " + INSPECT_EVALS_COMMIT,
+                "task_files_read": ["mmlu.py", "eval.yaml"],
+                "prompt_template_source": (
+                    "MultipleChoiceTemplate.SINGLE_ANSWER from "
+                    "UKGovernmentBEIS/inspect_ai "
+                    "src/inspect_ai/solver/_multiple_choice.py (read "
+                    "2026-09-29; based on openai/simple-evals mmlu_eval.py); "
+                    "choice letters formatted per format_mmlu_choices in mmlu.py"
+                ),
+                "dataset": MMLU_DATASET,
+                "dataset_config": MMLU_CONFIG,
+                "dataset_split": MMLU_SPLIT,
+                "dataset_revision": MMLU_REVISION,
+                "sample": (
+                    f"first {N_SAMPLES} rows via HuggingFace datasets-server "
+                    "(offset 0, length 12)"
+                ),
+                "translation": (
+                    "mechanical: prompt = SINGLE_ANSWER template over "
+                    "question + lettered choices; metadata = subject only"
+                ),
+                "excluded": [
+                    "answer (answer index 0-3): public in the dataset but "
+                    "harness-side; it is the sample target that choice() "
+                    "grades against"
+                ],
+                "no_traces": True,
+                "generated_by": "examples/report-cards/real/build_real_cards.py",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"mmlu: {len(tasks)} tasks -> {out}")
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-dir", required=True, help="Where to write the artifacts.")
     parser.add_argument(
         "--only",
-        choices=["swe-bench-verified", "healthbench", "writingbench"],
+        choices=["swe-bench-verified", "healthbench", "writingbench", "mmlu"],
         default=None,
         help="Build just one artifact (default: all).",
     )
@@ -532,6 +707,7 @@ def main() -> None:
         "swe-bench-verified": build_swe_bench,
         "healthbench": build_healthbench,
         "writingbench": build_writingbench,
+        "mmlu": build_mmlu,
     }
     for name, fn in builders.items():
         if args.only is None or args.only == name:
