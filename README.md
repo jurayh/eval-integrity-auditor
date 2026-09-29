@@ -134,6 +134,7 @@ on a clean eval is worse than no auditor, so every finding carries a
 | JUDGE-004 | Judge disagrees with reference labels | High |
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
+| JUDGE-007 | Judge confidence miscalibrated (stated confidence does not track accuracy) | Medium |
 
 `evalwarden explain COST-004` prints any check's threat model, evidence, and fix.
 

@@ -4,7 +4,9 @@ JUDGE-001 / JUDGE-002 come straight from the spec: a model judge with no
 labeled calibration set, and a pairwise protocol without order
 counterbalancing. JUDGE-003..006 are the v1 deterministic calibration slice:
 self-consistency across repeats, agreement with reference labels, and
-deterministic heuristics for position and verbosity bias.
+deterministic heuristics for position and verbosity bias. JUDGE-007 is the
+probabilistic calibration slice: it measures whether the judge's stated
+confidence tracks its empirical accuracy on labeled items.
 
 Precision-first throughout: bias heuristics carry minimum-sample guards and
 Medium severity/confidence labels, and a clean, well-run judge produces no
@@ -15,6 +17,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from ..calibration import bin_pairs, expected_calibration_error, mean_signed_gap
 from ..model import Confidence, Finding, IntegrityModel, Judgment, Severity, SourceLocation
 from .base import Check, CheckMeta
 
@@ -24,6 +27,9 @@ AGREEMENT_FLOOR = 0.75   # reference agreement below this is a finding
 MIN_PAIRS = 20           # pairs needed before naming a bias
 BIAS_RATE = 0.65         # win rate at or beyond this (either side) is a finding
 SCORE_RANGE_FRAC = 0.2   # score spread beyond this fraction of scale is inconsistent
+MIN_CALIBRATION_PAIRS = 30  # labeled confidence pairs needed before judging calibration
+ECE_THRESHOLD = 0.15     # ECE at or above this is clear miscalibration
+GAP_MARGIN = 0.10        # |mean signed gap| at or above this names a direction
 
 
 def _is_judge(model: IntegrityModel) -> bool:
@@ -409,6 +415,84 @@ class VerbosityBiasCheck(Check):
         ]
 
 
+class JudgeCalibrationCheck(Check):
+    meta = CheckMeta(
+        id="JUDGE-007",
+        title="Judge confidence miscalibrated",
+        threat=(
+            "A judge whose stated confidence does not track its empirical "
+            "accuracy is an uncalibrated instrument: confidence-gated decisions "
+            "(abstention, routing, weighting) rest on numbers that mean nothing. "
+            "Systematic overconfidence is the common failure mode."
+        ),
+        remediation=(
+            "Recalibrate the judge (temperature or Platt scaling on a held-out "
+            "labeled set), collect more labeled judgments, or stop making "
+            "decisions on raw judge confidence until it is validated."
+        ),
+    )
+
+    def run(self, model: IntegrityModel) -> list[Finding]:
+        if not _is_judge(model):
+            return []
+        labels = model.grader.reference_labels
+        if not labels:
+            return []
+        # Narrow: pairwise judgments where the winner is compared to the
+        # reference label, and only where the harness recorded confidence.
+        pairs: list[tuple[float, bool]] = []
+        for j in model.judgments:
+            label = labels.get(j.task_id)
+            if label is None or j.winner is None or j.confidence is None:
+                continue
+            conf = j.confidence
+            if (
+                isinstance(conf, bool)
+                or not isinstance(conf, (int, float))
+                or not 0.0 <= conf <= 1.0
+            ):
+                continue
+            pairs.append((float(conf), j.winner == label))
+        if len(pairs) < MIN_CALIBRATION_PAIRS:
+            return []
+        ece = expected_calibration_error(pairs)
+        if ece < ECE_THRESHOLD:
+            return []
+        gap = mean_signed_gap(pairs)
+        if gap >= GAP_MARGIN:
+            verdict = "overconfident"
+        elif gap <= -GAP_MARGIN:
+            verdict = "underconfident"
+        else:
+            verdict = "miscalibrated"
+        worst = max(
+            bin_pairs(pairs), key=lambda b: abs(b.accuracy - b.mean_confidence)
+        )
+        return [
+            Finding(
+                id=self.meta.id,
+                title=f"Judge {verdict}: stated confidence does not track accuracy",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.MEDIUM,
+                description=self.meta.threat,
+                evidence=[
+                    f"expected calibration error {ece:.2f} across {len(pairs)} "
+                    f"labeled pairwise judgments (threshold {ECE_THRESHOLD:.2f}).",
+                    f"mean signed gap {gap:+.2f}: stated confidence runs "
+                    f"{abs(gap):.0%} "
+                    f"{'above' if gap >= 0 else 'below'} empirical accuracy.",
+                    f"worst bin [{worst.lo:.1f}, {worst.hi:.1f}]: stated "
+                    f"confidence {worst.mean_confidence:.2f} but accuracy "
+                    f"{worst.accuracy:.2f} over {worst.count} judgments.",
+                    "Statistical signal: corroborate on a held-out labeled set "
+                    "before treating it as proof.",
+                ],
+                locations=[_judge_loc(model, "judgments[].confidence vs reference_labels")],
+                remediation=self.meta.remediation,
+            )
+        ]
+
+
 CHECKS = [
     UnvalidatedJudgeCheck(),  # JUDGE-001
     PairOrderCheck(),  # JUDGE-002
@@ -416,4 +500,5 @@ CHECKS = [
     ReferenceAgreementCheck(),  # JUDGE-004
     PositionBiasCheck(),  # JUDGE-005
     VerbosityBiasCheck(),  # JUDGE-006
+    JudgeCalibrationCheck(),  # JUDGE-007
 ]

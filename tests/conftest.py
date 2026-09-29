@@ -67,7 +67,7 @@ def make_judge_grader(**kwargs) -> Grader:
 
 
 def make_judgment(task_id="t01", winner="sol-a", order=("a", "b"),
-                 la=600, lb=400, repeat_index=0, scores=None) -> Judgment:
+                 la=600, lb=400, repeat_index=0, scores=None, confidence=None) -> Judgment:
     return Judgment(
         task_id=task_id,
         candidates=["sol-a", "sol-b"],
@@ -76,6 +76,7 @@ def make_judgment(task_id="t01", winner="sol-a", order=("a", "b"),
         scores=scores or {},
         lengths={"sol-a": la, "sol-b": lb},
         repeat_index=repeat_index,
+        confidence=confidence,
     )
 
 

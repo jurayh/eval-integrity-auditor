@@ -1,7 +1,10 @@
-"""JUDGE-001 .. JUDGE-006 tests: positive, negative, and precision cases."""
+"""JUDGE-001 .. JUDGE-007 tests: positive, negative, and precision cases."""
 from __future__ import annotations
 
+import random
+
 from evalwarden.checks.judge import (
+    JudgeCalibrationCheck,
     PositionBiasCheck,
     ReferenceAgreementCheck,
     SelfConsistencyCheck,
@@ -19,6 +22,7 @@ c3 = SelfConsistencyCheck()
 c4 = ReferenceAgreementCheck()
 c5 = PositionBiasCheck()
 c6 = VerbosityBiasCheck()
+c7 = JudgeCalibrationCheck()
 
 
 def _ids(findings):
@@ -266,3 +270,79 @@ def test_judge006_script_grader_not_flagged():
     model = make_model(grader=Grader(kind="script"), judgments=_length_pairs(24, 20))
     for check in (c1, c2, c3, c4, c5, c6):
         assert check.run(model) == []
+
+
+# ---- JUDGE-007: judge confidence calibration ----
+
+
+def _calibration_judgments(n, confidences, accuracy_fn, seed, confidence=True):
+    rng = random.Random(seed)
+    judgments = []
+    for i in range(n):
+        conf = confidences[i % len(confidences)]
+        correct = rng.random() < accuracy_fn(conf)
+        judgments.append(
+            make_judgment(
+                task_id=f"cal-{i:03d}",
+                winner="sol-a" if correct else "sol-b",
+                confidence=conf if confidence else None,
+            )
+        )
+    return judgments
+
+
+def _calibration_model(n, confidences, accuracy_fn, seed, **kwargs):
+    labels = {f"cal-{i:03d}": "sol-a" for i in range(n)}
+    grader = make_judge_grader(reference_labels=labels, **kwargs)
+    judgments = _calibration_judgments(n, confidences, accuracy_fn, seed)
+    return make_model(grader=grader, judgments=judgments)
+
+
+def test_judge007_overconfident_flagged():
+    model = _calibration_model(100, [0.9], lambda c: 0.6, seed=11)
+    findings = c7.run(model)
+    assert len(findings) == 1
+    assert findings[0].id == "JUDGE-007"
+    assert "overconfident" in findings[0].title
+    assert findings[0].severity == Severity.MEDIUM
+    assert findings[0].confidence == Confidence.MEDIUM
+
+
+def test_judge007_underconfident_flagged():
+    model = _calibration_model(100, [0.4], lambda c: 0.9, seed=11)
+    findings = c7.run(model)
+    assert len(findings) == 1
+    assert findings[0].id == "JUDGE-007"
+    assert "underconfident" in findings[0].title
+
+
+def test_judge007_calibrated_not_flagged():
+    model = _calibration_model(100, [0.6, 0.7, 0.8, 0.9], lambda c: c, seed=11)
+    assert c7.run(model) == []
+
+
+def test_judge007_silent_without_confidence():
+    labels = {f"cal-{i:03d}": "sol-a" for i in range(100)}
+    grader = make_judge_grader(reference_labels=labels)
+    judgments = _calibration_judgments(100, [0.9], lambda c: 0.6, seed=11, confidence=False)
+    model = make_model(grader=grader, judgments=judgments)
+    assert c7.run(model) == []
+
+
+def test_judge007_silent_without_labels():
+    grader = make_judge_grader(reference_labels={})
+    judgments = _calibration_judgments(100, [0.9], lambda c: 0.6, seed=11)
+    model = make_model(grader=grader, judgments=judgments)
+    assert c7.run(model) == []
+
+
+def test_judge007_silent_below_min_samples():
+    # 10 overconfident judgments: clear signal, too little data to trust.
+    model = _calibration_model(10, [0.9], lambda c: 0.6, seed=11)
+    assert c7.run(model) == []
+
+
+def test_judge007_script_grader_not_flagged():
+    judgments = _calibration_judgments(100, [0.9], lambda c: 0.6, seed=11)
+    model = make_model(grader=Grader(kind="script"), judgments=judgments)
+    assert c7.run(model) == []

@@ -130,6 +130,9 @@ class Judgment:
     scores: dict[str, float] = field(default_factory=dict)  # candidate -> score
     lengths: dict[str, int] = field(default_factory=dict)  # candidate -> chars
     repeat_index: int = 0
+    # Stated probability the verdict is correct, 0..1. None when the harness
+    # does not record confidence (adapters populate it when available).
+    confidence: float | None = None
 
 
 @dataclass

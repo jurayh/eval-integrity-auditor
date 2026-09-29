@@ -17,7 +17,7 @@ REGISTRY: list[Check] = [
     VerifierWritableCheck(),  # GRAD-001
     EmptyPathCheck(),  # GRAD-002
     *COST_CHECKS,  # COST-001 .. COST-004
-    *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-006
+    *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-007
 ]
 
 BY_ID: dict[str, Check] = {check.meta.id: check for check in REGISTRY}
