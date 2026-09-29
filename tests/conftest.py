@@ -37,12 +37,13 @@ def make_model(
     grader: Grader | None = None,
     attempts: list[Attempt] | None = None,
     judgments: list[Judgment] | None = None,
+    tasks: list[TaskSample] | None = None,
 ) -> IntegrityModel:
     return IntegrityModel(
         eval_id="test-eval",
         adapter_name="test",
         adapter_version="0.0.0",
-        tasks=[TaskSample(id="t1", prompt="do the thing")],
+        tasks=tasks if tasks is not None else [TaskSample(id="t1", prompt="do the thing")],
         environment=Environment(env_vars=env_vars or {}, mounts=mounts or []),
         grader=grader or Grader(),
         attempts=attempts or [],

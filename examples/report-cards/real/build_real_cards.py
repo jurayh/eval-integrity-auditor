@@ -43,8 +43,10 @@ pinned sources are unchanged.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
+import random
 import urllib.request
 from pathlib import Path
 
@@ -913,12 +915,232 @@ def build_mmlu(work: Path) -> Path:
     return out
 
 
+# GPQA Diamond: the dataset is a single CSV whose URL and sha256 are pinned
+# in the task source itself (gpqa.py: GPQA_DIAMOND_DATASET_URL,
+# GPQA_DIAMOND_DATASET_SHA256, computed 2026-04-07).
+GPQA_CSV_URL = (
+    "https://openaipublic.blob.core.windows.net/simple-evals/gpqa_diamond.csv"
+)
+GPQA_CSV_SHA256 = (
+    "41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305"
+)
+# Fixed choice-shuffle seed from the task (DEFAULT_SHUFFLE_SEED in gpqa.py).
+# The raw CSV lists the correct answer first, so the seeded shuffle makes the
+# presented exam identical on every build.
+GPQA_SHUFFLE_SEED = 42
+# Exact prompt template: MultipleChoiceTemplate.SINGLE_ANSWER_COT from
+# inspect_ai (src/inspect_ai/solver/_multiple_choice.py); the task's solver is
+# multiple_choice(cot=True) by default. Choices are lettered per
+# answer_options() in the same module ("A) ...").
+GPQA_PROMPT_TEMPLATE = (
+    "Answer the following multiple choice question. The last line of your "
+    "response should be of the following format: 'ANSWER: $LETTER' "
+    "(without quotes) where LETTER is one of {letters}. Think step by step "
+    "before answering.\n"
+    "\n"
+    "{question}\n"
+    "\n"
+    "{choices}"
+)
+
+
+def _get_bytes(url: str) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "evalwarden-card-builder/1.0"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return resp.read()
+
+
+def _gpqa_shuffled_choices(
+    records: list[dict[str, str]],
+) -> list[tuple[list[str], str]]:
+    """Replicate the task's seeded choice shuffle.
+
+    Mirrors inspect_ai MemoryDataset.shuffle_choices(seed=42): ONE
+    random.Random(42) shared across samples in dataset order; per sample the
+    choice positions are shuffled and the target letter remapped (the correct
+    answer is choices[0] in the raw CSV). Returns (shuffled choices,
+    target letter) per record.
+    """
+    rand = random.Random(GPQA_SHUFFLE_SEED)
+    out = []
+    for rec in records:
+        choices = [
+            rec["Correct Answer"],
+            rec["Incorrect Answer 1"],
+            rec["Incorrect Answer 2"],
+            rec["Incorrect Answer 3"],
+        ]
+        positions = list(range(len(choices)))
+        rand.shuffle(positions)
+        shuffled = [choices[i] for i in positions]
+        target_letter = chr(ord("A") + positions.index(0))
+        out.append((shuffled, target_letter))
+    return out
+
+
+def _format_gpqa_prompt(question: str, choices: list[str]) -> str:
+    letters = ",".join(chr(ord("A") + i) for i in range(len(choices)))
+    choice_lines = "\n".join(
+        f"{chr(ord('A') + i)}) {c}" for i, c in enumerate(choices)
+    )
+    return GPQA_PROMPT_TEMPLATE.format(
+        letters=letters, question=question, choices=choice_lines
+    )
+
+
+def build_gpqa(work: Path) -> Path:
+    """Translate the inspect_evals gpqa_diamond task definition (default args)."""
+    out = work / "gpqa"
+    out.mkdir(parents=True, exist_ok=True)
+
+    raw = _get_bytes(GPQA_CSV_URL)
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != GPQA_CSV_SHA256:
+        raise RuntimeError(
+            f"gpqa_diamond.csv hash mismatch: got {digest}, "
+            f"task source pins {GPQA_CSV_SHA256}"
+        )
+    records = list(csv.DictReader(raw.decode("utf-8").splitlines()))
+    assert len(records) == 198, f"expected 198 rows, got {len(records)}"
+    sample = records[:N_SAMPLES]
+    shuffled = _gpqa_shuffled_choices(sample)
+
+    tasks = []
+    for rec, (choices, _target) in zip(sample, shuffled):
+        tasks.append(
+            {
+                "id": rec["Record ID"],
+                "prompt": _format_gpqa_prompt(rec["Question"], choices),
+                "metadata": {
+                    "high_level_domain": rec["High-level domain"],
+                    "subdomain": rec["Subdomain"],
+                },
+            }
+        )
+
+    (out / "dataset.json").write_text(
+        json.dumps(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "eval_id": "GPQA Diamond via inspect_evals",
+                "tasks": tasks,
+                "notes": (
+                    f"Definition sample: {N_SAMPLES} of 198 questions from "
+                    "gpqa_diamond.csv (URL and sha256 pinned in the task "
+                    "source; hash verified before use). The solver sees only "
+                    "the formatted multiple-choice question with the "
+                    "seed-42-shuffled choices. The correct-answer identity "
+                    "(target letter) is public in the dataset but EXCLUDED "
+                    "here: it is the harness-side sample target that "
+                    "choice() grades against, which the agent never sees. "
+                    "Sample = first 12 CSV rows in file order; the task "
+                    "applies no dataset-level shuffle, so this matches the "
+                    "task's own sample order."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "environment.json").write_text(
+        json.dumps(
+            {
+                "env": {},
+                "mounts": [],
+                "notes": (
+                    "The solver is multiple_choice(cot=True) over plain "
+                    "`generate` (no tools, no sandbox). The task definition "
+                    "(gpqa.py) declares no agent-visible environment "
+                    "variables and no mounts."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "grader.json").write_text(
+        json.dumps(
+            {
+                "kind": "script",
+                "verifier": {
+                    "path": (
+                        "inspect_ai.scorer.choice: parses the model's selected "
+                        "letter from the completion and compares it to the "
+                        "harness-side target letter"
+                    ),
+                    "writable_by_agent": False,
+                },
+                "tests": ["letter-match (A/B/C/D)"],
+                "notes": (
+                    "choice() grades the selected letter against the sample "
+                    "target, which lives in harness-side sample metadata. "
+                    "Scoring runs harness-side after the agent submits; the "
+                    "agent never sees the target and has no write path to the "
+                    "scoring. Completions with no parseable letter score as "
+                    "incorrect (0.0); there is no empty-output credit path. "
+                    "No judge model is involved: JUDGE-001..006 do not apply."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "PROVENANCE.json").write_text(
+        json.dumps(
+            {
+                "benchmark": "GPQA Diamond (Rein et al., 2023)",
+                "task_definition": "inspect_evals/gpqa @ " + INSPECT_EVALS_COMMIT,
+                "task_files_read": ["gpqa.py", "eval.yaml"],
+                "dataset_url": GPQA_CSV_URL,
+                "dataset_sha256": GPQA_CSV_SHA256,
+                "dataset_sha256_source": (
+                    "GPQA_DIAMOND_DATASET_SHA256 in gpqa.py (pinned in the "
+                    "task source; verified by this builder before use)"
+                ),
+                "dataset_split": "gpqa_diamond.csv (198 questions)",
+                "sample": f"first {N_SAMPLES} CSV rows in file order",
+                "choice_shuffle": (
+                    "replicated from inspect_ai MemoryDataset.shuffle_choices "
+                    "(single random.Random(42) across samples in order; "
+                    "target letter remapped); seed from DEFAULT_SHUFFLE_SEED "
+                    "in gpqa.py"
+                ),
+                "prompt_template_source": (
+                    "MultipleChoiceTemplate.SINGLE_ANSWER_COT from "
+                    "UKGovernmentBEIS/inspect_ai "
+                    "src/inspect_ai/solver/_multiple_choice.py (read "
+                    "2026-09-29); task solver is multiple_choice(cot=True)"
+                ),
+                "translation": (
+                    "mechanical: prompt = SINGLE_ANSWER_COT template over "
+                    "question + seed-shuffled lettered choices; metadata = "
+                    "record id, high-level domain, subdomain"
+                ),
+                "excluded": [
+                    "correct-answer identity (target letter): public in the dataset but harness-side; it is the sample target that choice() grades against",
+                    "validator metadata columns (expert/non-expert validator accuracy, feedback, etc.): collected during benchmark construction; not read by the task definition",
+                    "pre-revision fields: superseded by the revised columns the task reads",
+                ],
+                "no_traces": True,
+                "generated_by": "examples/report-cards/real/build_real_cards.py",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"gpqa: {len(tasks)} tasks -> {out}")
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-dir", required=True, help="Where to write the artifacts.")
     parser.add_argument(
         "--only",
-        choices=["swe-bench-verified", "healthbench", "healthbench-meta-eval", "writingbench", "mmlu"],
+        choices=["swe-bench-verified", "healthbench", "healthbench-meta-eval", "writingbench", "mmlu", "gpqa"],
         default=None,
         help="Build just one artifact (default: all).",
     )
@@ -930,6 +1152,7 @@ def main() -> None:
         "healthbench-meta-eval": build_healthbench_meta_eval,
         "writingbench": build_writingbench,
         "mmlu": build_mmlu,
+        "gpqa": build_gpqa,
     }
     for name, fn in builders.items():
         if args.only is None or args.only == name:

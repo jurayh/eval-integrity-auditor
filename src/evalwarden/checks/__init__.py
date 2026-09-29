@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .base import Check
 from .cost import CHECKS as COST_CHECKS
+from .data import CHECKS as DATA_CHECKS
 from .env_leakage import EnvLeakageCheck
 from .grader import EmptyPathCheck, VerifierWritableCheck
 from .judge import CHECKS as JUDGE_CHECKS
@@ -18,6 +19,7 @@ REGISTRY: list[Check] = [
     EmptyPathCheck(),  # GRAD-002
     *COST_CHECKS,  # COST-001 .. COST-004
     *JUDGE_CHECKS,  # JUDGE-001 .. JUDGE-007
+    *DATA_CHECKS,  # DATA-001 .. DATA-002
 ]
 
 BY_ID: dict[str, Check] = {check.meta.id: check for check in REGISTRY}

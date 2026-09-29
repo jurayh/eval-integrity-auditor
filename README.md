@@ -135,6 +135,8 @@ on a clean eval is worse than no auditor, so every finding carries a
 | JUDGE-005 | Position bias: presentation order predicts the winner | Medium |
 | JUDGE-006 | Verbosity bias: longer answers win disproportionately | Medium |
 | JUDGE-007 | Judge confidence miscalibrated (stated confidence does not track accuracy) | Medium |
+| DATA-001 | Eval dataset looks saturated (most items answered correctly by every model) | Medium |
+| DATA-002 | Eval dataset contains near-duplicate items | Low |
 
 `evalwarden explain COST-004` prints any check's threat model, evidence, and fix.
 

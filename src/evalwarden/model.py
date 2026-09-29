@@ -147,6 +147,10 @@ class Attempt:
     latency_s: float | None = None
     tries: int = 1
     empty_submission: bool = False
+    # Which model produced this attempt. Adapters set it when the eval ran
+    # more than one model; the DATA-lane checks group by it. None means the
+    # eval ran a single unnamed model.
+    model_id: str | None = None
 
 
 @dataclass
