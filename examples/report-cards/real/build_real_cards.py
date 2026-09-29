@@ -24,6 +24,8 @@ Pinned sources (all public, no auth):
   rev c104f840cc67f8b6eec6f759ebc8b2693d585d4a (pinned in the task source)
 - HealthBench: https://openaipublic.blob.core.windows.net/simple-evals/healthbench/2025-05-07-06-14-12_oss_eval.jsonl
   (URL pinned in the task source)
+- WritingBench: benchmark_all.jsonl inside the inspect_evals repo at the pinned
+  commit (fetched via raw.githubusercontent.com at that commit)
 
 Usage:
     python3 build_real_cards.py --work-dir /tmp/real_work
@@ -357,13 +359,183 @@ def build_healthbench(work: Path) -> Path:
     return out
 
 
+# Exact judge defaults from writingbench() / multi_scorer_wrapper() in
+# writingbench.py at the pinned commit (read by a human; the machine link is
+# this file's content hash).
+WB_URL = (
+    "https://raw.githubusercontent.com/UKGovernmentBEIS/inspect_evals/"
+    "244e43cc924d1de5a78dad7db259bbd4471c97e7/src/inspect_evals/writingbench/"
+    "benchmark_all.jsonl"
+)
+WB_JUDGE_MODEL = "anthropic/claude-3-5-haiku-latest"
+WB_GRADE_PATTERN = r'"score"\s*:\s*(10|[1-9])'
+WB_SCALE_ANCHORS = {
+    "1-2": "Low score description: Critical deficiencies and major issues that prevent adequate functionality.",
+    "3-4": "Below average score description: Lacking with noticeable shortcomings that impact overall effectiveness and require improvement.",
+    "5-6": "Average score description: Adequate but not exemplary, Baseline performance that meets essential requirements. Most models may achieve this score.",
+    "7-8": "Above average score description: Strong performance characterized by competent execution, though minor refinements are needed to achieve excellence.",
+    "9-10": "High score description: Exceptional performance with all aspects optimally addressed, demonstrating superior effectiveness and quality without any flaws.",
+}
+
+
+def build_writingbench(work: Path) -> Path:
+    """Translate the inspect_evals writingbench task definition (default args)."""
+    out = work / "writingbench"
+    out.mkdir(parents=True, exist_ok=True)
+
+    lines = _get_jsonl_head(WB_URL, N_SAMPLES)
+    records = [json.loads(ln) for ln in lines[:N_SAMPLES]]
+    assert len(records) == N_SAMPLES, f"expected {N_SAMPLES} records, got {len(records)}"
+
+    tasks = []
+    for rec in records:
+        checklist = rec["checklist"]
+        tasks.append(
+            {
+                "id": str(rec["index"]),
+                "prompt": rec["query"],
+                "metadata": {
+                    "domain1": rec["domain1"],
+                    "domain2": rec["domain2"],
+                    "n_checklist_items": len(checklist),
+                    "checklist_names": [item["name"] for item in checklist],
+                },
+            }
+        )
+    # One verbatim checklist item, carried as grader-side evidence that the
+    # per-criterion anchors exist (each item also carries its own 1-2..9-10
+    # level texts beyond the generic scoring rules).
+    criteria_sample = records[0]["checklist"][0]
+
+    (out / "dataset.json").write_text(
+        json.dumps(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "eval_id": "WritingBench via inspect_evals",
+                "tasks": tasks,
+                "notes": (
+                    f"Definition sample: {N_SAMPLES} of 1000 queries from "
+                    "benchmark_all.jsonl (URL pinned in the task source; the "
+                    "file lives in the inspect_evals repo at the pinned "
+                    "commit). The solver sees only the query. Each record "
+                    "carries a 5-item checklist of grading criteria in its "
+                    "metadata; those criterion texts are grader-side and "
+                    "summarized here as names, with one verbatim item carried "
+                    "in grader.json as the rubric_criteria sample."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "environment.json").write_text(
+        json.dumps(
+            {
+                "env": {},
+                "mounts": [],
+                "notes": (
+                    "The solver is plain `generate` (no tools, no sandbox) "
+                    "with GenerateConfig(top_p=0.8, top_k=20, temperature=0.7, "
+                    "max_tokens=16000). The task definition (writingbench.py) "
+                    "declares no agent-visible environment. The checklist is "
+                    "sample metadata used only in the scoring template; the "
+                    "solver never sees it."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "grader.json").write_text(
+        json.dumps(
+            {
+                "kind": "judge",
+                "judge": {
+                    # Defaults from writingbench() and multi_scorer_wrapper().
+                    "model": WB_JUDGE_MODEL,
+                    "protocol": "pointwise",
+                    "temperature": 0.7,
+                    "top_p": 0.8,
+                    "top_k": 20,
+                    "max_tokens": 2048,
+                    "repeats": 1,
+                    "n_criteria_per_sample": 5,
+                    "aggregation": "mean",
+                    "grade_pattern": WB_GRADE_PATTERN,
+                    "scale_anchors": WB_SCALE_ANCHORS,
+                    "rubric_criteria": criteria_sample,
+                },
+                "notes": (
+                    "Five model_graded_qa scorers via multi_scorer, one per "
+                    "checklist item, reduced by mean. The scoring template "
+                    "carries the generic 1-10 anchored level descriptions "
+                    "plus the per-item criterion text; each checklist item "
+                    "additionally ships its own 1-2..9-10 level texts. Judge "
+                    "completions that do not match the grade pattern are "
+                    "dropped from the per-sample criterion mean rather than "
+                    "zeroed (changelog 3-A); a sample whose criteria all fail "
+                    "is unscored, visible only via unscored_samples. No "
+                    "labeled calibration set ships in the eval definition: "
+                    "the README's Validation Notes cover pipeline execution "
+                    "(end-to-end runs, metric math, multilingual handling, "
+                    "parse-failure surfacing), not judge-vs-human agreement."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (out / "PROVENANCE.json").write_text(
+        json.dumps(
+            {
+                "benchmark": "WritingBench (2025)",
+                "task_definition": "inspect_evals/writingbench @ " + INSPECT_EVALS_COMMIT,
+                "task_files_read": ["writingbench.py", "eval.yaml", "README.md"],
+                "dataset_url": WB_URL,
+                "dataset_split": "benchmark_all.jsonl (1000 queries per eval.yaml)",
+                "sample": f"first {N_SAMPLES} JSONL records via ranged head fetch",
+                "judge_defaults_source": (
+                    "writingbench() task signature (judge_model) and "
+                    "multi_scorer_wrapper() (grade pattern, judge GenerateConfig, "
+                    "5 scorers, mean reducer); anchored level texts from "
+                    "create_scoring_prompt()"
+                ),
+                "excluded": [
+                    "checklist criterion texts (criteria_description + per-level anchors): public in the dataset but grader-side; the solver prompt carries only the query",
+                ],
+                "no_traces": True,
+                "generated_by": "examples/report-cards/real/build_real_cards.py",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"writingbench: {len(tasks)} tasks -> {out}")
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-dir", required=True, help="Where to write the artifacts.")
+    parser.add_argument(
+        "--only",
+        choices=["swe-bench-verified", "healthbench", "writingbench"],
+        default=None,
+        help="Build just one artifact (default: all).",
+    )
     args = parser.parse_args()
     work = Path(args.work_dir)
-    build_swe_bench(work)
-    build_healthbench(work)
+    builders = {
+        "swe-bench-verified": build_swe_bench,
+        "healthbench": build_healthbench,
+        "writingbench": build_writingbench,
+    }
+    for name, fn in builders.items():
+        if args.only is None or args.only == name:
+            fn(work)
     print("done. Next: evalwarden audit <dir> to review, then evalwarden report-cards <dirs>.")
 
 
