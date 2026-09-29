@@ -173,6 +173,13 @@ artifact alone cannot verify the judge. The
 [reading guide](examples/report-cards/real/README.md) walks through both
 cards, the translation, and the scope limits.
 
+## Evidence registry
+
+Report cards live on as versioned, independently regenerable evidence in the
+[Evalwarden Evidence Registry](https://github.com/jurayh/evidence-registry):
+each entry is an evidence pack binding an executable audit to pinned public
+inputs and a one-command regeneration, so a stranger can verify the card.
+
 ## How it works
 
 Adapters translate harness artifacts into a framework-neutral integrity
