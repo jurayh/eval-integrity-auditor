@@ -78,6 +78,13 @@ Deterministic, high-precision checks. A linter that cries contamination on a cle
 | DATA-001 | Dataset looks saturated (most items answered correctly by every model) | Medium |
 | DATA-002 | Dataset contains near-duplicate items | Low |
 
+**TRAJ — the agent's trajectory**
+
+| ID | Check | Severity |
+|----|-------|----------|
+| TRAJ-001 | Trajectory repeats identical tool calls (exact loops) | High |
+| TRAJ-002 | Tool outputs consumed by nothing downstream | High |
+
 `evalwarden explain COST-004` prints any check's threat model, evidence, and fix.
 
 ## How evalwarden differs

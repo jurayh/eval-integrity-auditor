@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import evalwarden
-from evalwarden.model import Attempt, Environment, Grader, IntegrityModel, Judgment, TaskSample
+from evalwarden.model import Attempt, Environment, Grader, IntegrityModel, Judgment, TaskSample, TrajectoryStep
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -80,6 +80,26 @@ def make_judgment(task_id="t01", winner="sol-a", order=("a", "b"),
         repeat_index=repeat_index,
         confidence=confidence,
         judge_id=judge_id,
+    )
+
+
+def make_step(step_id="s00", tool="read_file", args=None, consumes=None,
+              output=None) -> TrajectoryStep:
+    return TrajectoryStep(
+        step_id=step_id,
+        tool=tool,
+        args=dict(args) if args is not None else {},
+        output=output,
+        consumes=list(consumes) if consumes is not None else [],
+    )
+
+
+def make_attempt(task_id="t1", status="pass", spans=None, **kwargs) -> Attempt:
+    return Attempt(
+        task_id=task_id,
+        status=status,
+        spans=list(spans) if spans is not None else [],
+        **kwargs,
     )
 
 

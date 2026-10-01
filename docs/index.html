@@ -202,7 +202,7 @@
 <section>
   <div class="wrap">
     <div class="eyebrow">The check catalog</div>
-    <h2>Twenty checks across five lanes.</h2>
+    <h2>Twenty-two checks across six lanes.</h2>
     <div class="lanes">
       <div class="lane">
         <div class="k">ENV</div>
@@ -246,6 +246,15 @@
           <li><code>JUDGE-005</code>Position bias — presentation order predicts the winner</li>
           <li><code>JUDGE-006</code>Verbosity bias — longer answers win disproportionately</li>
           <li><code>JUDGE-007</code>Judge confidence miscalibrated — stated confidence does not track accuracy</li>
+          <li><code>JUDGE-008</code>Redundant judges in panel — a judge never differs from the rest</li>
+        </ul>
+      </div>
+      <div class="lane">
+        <div class="k">TRAJ</div>
+        <h3>The agent's trajectory</h3>
+        <ul>
+          <li><code>TRAJ-001</code>Trajectory repeats identical tool calls</li>
+          <li><code>TRAJ-002</code>Tool outputs consumed by nothing downstream</li>
         </ul>
       </div>
     </div>

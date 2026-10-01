@@ -140,6 +140,23 @@ class Judgment:
 
 
 @dataclass
+class TrajectoryStep:
+    """One tool call inside an agent trajectory, structured.
+
+    Adapters populate these from harness traces (JSONL spans). Raw
+    rationales and full outputs are redacted/truncated at the boundary:
+    only the structured call shape and the data-flow edges survive, which
+    is all the trajectory checks need.
+    """
+
+    step_id: str  # unique within the attempt's trajectory
+    tool: str  # tool name, e.g. "read_file"
+    args: dict = field(default_factory=dict)  # normalized JSON-able arguments
+    output: str | None = None  # redacted/truncated tool result (kept for future checks)
+    consumes: list[str] = field(default_factory=list)  # step_ids whose outputs this step used
+
+
+@dataclass
 class Attempt:
     task_id: str
     status: str  # "pass" | "fail" | "error" | "incomplete"
@@ -155,6 +172,10 @@ class Attempt:
     # more than one model; the DATA-lane checks group by it. None means the
     # eval ran a single unnamed model.
     model_id: str | None = None
+    # Trajectory spans, when the harness records tool-call traces. Adapters
+    # populate them from JSONL spans; empty when the harness keeps no trace.
+    # The TRAJ-lane checks read these and stay silent without them.
+    spans: list[TrajectoryStep] = field(default_factory=list)
 
 
 @dataclass
